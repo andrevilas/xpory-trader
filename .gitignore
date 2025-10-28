@@ -1,12 +1,27 @@
+# OS generated files
 Thumbs.db
 .DS_Store
-.gradle
+
+# Gradle and Grails build system state
+.gradle/
+.gradle-home/
 build/
 out/
-.idea
+target/
+
+# IDE project files
+.idea/
 *.iml
 *.ipr
 *.iws
 .project
 .settings
 .classpath
+
+# Runtime artifacts and temp files
+logs/
+tmp/
+*.log
+*.tmp
+*.swp
+*.swo

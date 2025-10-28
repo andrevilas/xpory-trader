@@ -1,0 +1,177 @@
+---
+grails:
+    profile: web
+    codegen:
+        defaultPackage: cpservice
+    gorm:
+        reactor:
+            # Whether to translate GORM events into Reactor events
+            # Disabled by default for performance reasons
+            events: false
+info:
+    app:
+        name: '@info.app.name@'
+        version: '@info.app.version@'
+        grailsVersion: '@info.app.grailsVersion@'
+spring:
+    main:
+        banner-mode: "off"
+    groovy:
+        template:
+            check-template-location: false
+
+# Spring Actuator Endpoints are Disabled by Default
+endpoints:
+    enabled: false
+    jmx:
+        enabled: true
+
+---
+grails:
+    mime:
+        disable:
+            accept:
+                header:
+                    userAgents:
+                        - Gecko
+                        - WebKit
+                        - Presto
+                        - Trident
+        types:
+            all: '*/*'
+            atom: application/atom+xml
+            css: text/css
+            csv: text/csv
+            form: application/x-www-form-urlencoded
+            html:
+              - text/html
+              - application/xhtml+xml
+            js: text/javascript
+            json:
+              - application/json
+              - text/json
+            multipartForm: multipart/form-data
+            pdf: application/pdf
+            rss: application/rss+xml
+            text: text/plain
+            hal:
+              - application/hal+json
+              - application/hal+xml
+            xml:
+              - text/xml
+              - application/xml
+    urlmapping:
+        cache:
+            maxsize: 1000
+    controllers:
+        defaultScope: singleton
+    converters:
+        encoding: UTF-8
+    views:
+        default:
+            codec: html
+        gsp:
+            encoding: UTF-8
+            htmlcodec: xml
+            codecs:
+                expression: html
+                scriptlets: html
+                taglib: none
+                staticparts: none
+endpoints:
+    jmx:
+        unique-names: true
+
+---
+hibernate:
+    cache:
+        queries: false
+        use_second_level_cache: false
+        use_query_cache: false
+    format_sql: true
+    use_sql_comments: false
+dataSource:
+    pooled: true
+    jmxExport: true
+    driverClassName: org.postgresql.Driver
+    dialect: org.hibernate.dialect.PostgreSQL95Dialect
+    username: ${DB_USERNAME:xpory_cp}
+    password: ${DB_PASSWORD:xpory_cp}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory_cp}
+    properties:
+        jmxEnabled: true
+        initialSize: 5
+        maxActive: 50
+        minIdle: 5
+        maxIdle: 25
+        maxWait: 10000
+        timeBetweenEvictionRunsMillis: 5000
+        minEvictableIdleTimeMillis: 60000
+        validationQuery: SELECT 1
+        testOnBorrow: true
+        testWhileIdle: true
+        testOnReturn: false
+        jdbcInterceptors: ConnectionState
+
+environments:
+    development:
+        dataSource:
+            dbCreate: none
+            url: ${DEV_DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory_cp}}
+    test:
+        dataSource:
+            dbCreate: none
+            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            driverClassName: org.h2.Driver
+            dialect: org.hibernate.dialect.H2Dialect
+    production:
+        dataSource:
+            dbCreate: none
+            properties:
+                maxAge: 600000
+                defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
+
+server:
+    port: ${SERVER_PORT:8080}
+    ssl:
+        enabled: ${SERVER_SSL_ENABLED:false}
+        key-store: ${SERVER_SSL_KEY_STORE:}
+        key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:}
+        key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+        trust-store: ${SERVER_SSL_TRUST_STORE:}
+        trust-store-password: ${SERVER_SSL_TRUST_STORE_PASSWORD:}
+        client-auth: ${SERVER_SSL_CLIENT_AUTH:need}
+
+security:
+    jwt:
+        issuer: xpory-control-plane
+        ttlSeconds: ${JWT_TTL_SECONDS:300}
+        signingKey: ${JWT_SIGNING_KEY:}
+        signingKeyFile: ${JWT_SIGNING_KEY_FILE:}
+        envKeyVar: CP_JWT_SIGNING_KEY
+        fallbackSeed: xpory-control-plane
+    mtls:
+        enabled: ${MTLS_ENABLED:true}
+        trustStore: ${MTLS_TRUST_STORE:}
+        trustStorePassword: ${MTLS_TRUST_STORE_PASSWORD:}
+        keyStore: ${MTLS_KEY_STORE:}
+        keyStorePassword: ${MTLS_KEY_STORE_PASSWORD:}
+        rotationDays: ${CERT_ROTATION_DAYS:90}
+
+governance:
+    signatureSecret: ${APP_CP_GOVERNANCE_SIGNING_SECRET:}
+
+app:
+    policy:
+        cacheTtlSeconds: ${POLICY_CACHE_TTL_SECONDS:300}
+
+logging:
+    pattern:
+        console: "%d{ISO8601} %-5level [%thread] [cid:%X{correlationId}] %logger - %msg%n"
+
+---
+grails:
+    plugin:
+        databasemigration:
+            updateOnStart: ${DB_MIGRATION_UPDATE_ON_START:true}
+            updateOnStartFileName: changelog.groovy

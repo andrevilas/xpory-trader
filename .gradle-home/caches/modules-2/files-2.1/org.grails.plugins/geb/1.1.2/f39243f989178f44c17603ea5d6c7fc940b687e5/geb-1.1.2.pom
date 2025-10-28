@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.grails.plugins</groupId>
+  <artifactId>geb</artifactId>
+  <version>1.1.2</version>
+  <dependencies>
+    <dependency>
+      <groupId>org.gebish</groupId>
+      <artifactId>geb-spock</artifactId>
+      <version>1.1.1</version>
+      <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>groovy-all</artifactId>
+          <groupId>org.codehaus.groovy</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-support</artifactId>
+      <version>2.47.1</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+  <name>Grails Geb Plugin</name>
+  <description>Provides Integration with Geb for Functional Testing</description>
+  <url>https://github.com/grails3-plugins/geb</url>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/grails3-plugins/geb</url>
+    <connection>scm:git@github.com:grails3-plugins/geb.git</connection>
+    <developerConnection>scm:git@github.com:grails3-plugins/geb.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>Github Issues</system>
+    <url>https://github.com/grails3-plugins/geb/issues</url>
+  </issueManagement>
+  <developers>
+    <developer>
+      <id>jeffbrown</id>
+      <name>Jeff Scott Brown</name>
+    </developer>
+  </developers>
+</project>

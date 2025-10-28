@@ -1,0 +1,168 @@
+package cpservice
+
+import grails.core.GrailsApplication
+import grails.validation.ValidationException
+import grails.converters.JSON
+import org.springframework.http.HttpStatus
+
+class WhiteLabelController {
+
+    static responseFormats = ['json']
+
+    WhiteLabelRegistrationService whiteLabelRegistrationService
+    WhiteLabelPolicyService whiteLabelPolicyService
+    PolicyMetricsService policyMetricsService
+    JwtService jwtService
+    GrailsApplication grailsApplication
+    TraderAccountService traderAccountService
+    GovernanceSigningService governanceSigningService
+    GovernanceTelemetryService governanceTelemetryService
+
+    def index() {
+        List<WhiteLabel> whiteLabels = WhiteLabel.list(sort: 'name', order: 'asc')
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
+                items: whiteLabels.collect { WhiteLabel wl ->
+                    [
+                            id            : wl.id,
+                            name          : wl.name,
+                            description   : wl.description,
+                            contactEmail  : wl.contactEmail,
+                            status        : wl.status,
+                            baselinePolicy: policyAsMap(wl.baselinePolicy)
+                    ]
+                },
+                count: whiteLabels.size()
+        ] as JSON)
+    }
+
+    def save() {
+        Map payload = request.JSON as Map
+        try {
+            WhiteLabel wl = whiteLabelRegistrationService.register(payload)
+            render status: HttpStatus.CREATED.value(), contentType: "application/json", text: ([
+                    id            : wl.id,
+                    name          : wl.name,
+                    description   : wl.description,
+                    contactEmail  : wl.contactEmail,
+                    status        : wl.status,
+                    baselinePolicy: policyAsMap(wl.baselinePolicy)
+            ] as JSON)
+        } catch (IllegalArgumentException ex) {
+            render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
+        } catch (ValidationException ex) {
+            render status: HttpStatus.UNPROCESSABLE_ENTITY.value(), contentType: "application/json", text: ([
+                    error  : 'Validation failed',
+                    details: ex.errors?.allErrors?.collect { it.defaultMessage }
+            ] as JSON)
+        }
+    }
+
+    def show() {
+        String whiteLabelId = params.id
+        WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
+        if (!whiteLabel) {
+            render status: HttpStatus.NOT_FOUND.value()
+            return
+        }
+
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
+                id            : whiteLabel.id,
+                name          : whiteLabel.name,
+                description   : whiteLabel.description,
+                contactEmail  : whiteLabel.contactEmail,
+                status        : whiteLabel.status,
+                baselinePolicy: policyAsMap(whiteLabel.baselinePolicy)
+        ] as JSON)
+    }
+
+    def policies() {
+        String whiteLabelId = params.id
+        def responseBody = policyMetricsService.timePolicyFetch {
+            WhiteLabelPolicy policy = whiteLabelPolicyService.fetchBaseline(whiteLabelId)
+            return policy ? policyAsMap(policy) : null
+        }
+
+        if (!responseBody) {
+            render status: HttpStatus.NOT_FOUND.value()
+            return
+        }
+
+        Map signature = governanceSigningService.signPayload(responseBody as Map)
+        Map result = new LinkedHashMap(responseBody)
+        result.signature = signature
+        applyCacheHeaders()
+        governanceTelemetryService.recordPolicyPackageSent(whiteLabelId, [signature: signature.value])
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: (result as JSON)
+    }
+
+    def updatePolicies() {
+        String whiteLabelId = params.id
+        Map payload = request.JSON as Map ?: [:]
+        try {
+            WhiteLabelPolicy policy = whiteLabelPolicyService.updateBaseline(whiteLabelId, payload)
+        applyCacheHeaders()
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: (policyAsMap(policy) as JSON)
+        } catch (IllegalArgumentException ex) {
+            render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
+        } catch (ValidationException ex) {
+            render status: HttpStatus.UNPROCESSABLE_ENTITY.value(), contentType: "application/json", text: ([
+                    error  : 'Validation failed',
+                    details: ex.errors?.allErrors?.collect { it.defaultMessage }
+            ] as JSON)
+        }
+    }
+
+    def token() {
+        String whiteLabelId = params.id
+        WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
+        if (!whiteLabel) {
+            render status: HttpStatus.NOT_FOUND.value()
+            return
+        }
+        Map payload = request.JSON as Map ?: [:]
+        List<String> scopes = (payload.scopes ?: ['policies:read']) as List<String>
+        String token = jwtService.issueToken(whiteLabel.id, scopes)
+        render status: HttpStatus.CREATED.value(), contentType: "application/json", text: ([
+                token            : token,
+                expiresInSeconds : jwtService.tokenTtlSeconds
+        ] as JSON)
+    }
+
+    private Map policyAsMap(WhiteLabelPolicy policy) {
+        if (!policy) {
+            return null
+        }
+        Map result = [
+                id                 : policy.id,
+                whiteLabelId       : policy.whiteLabel.id,
+                white_label_id     : policy.whiteLabel.id,
+                importEnabled      : policy.importEnabled,
+                exportEnabled      : policy.exportEnabled,
+                exportDelaySeconds : policy.exportDelaySeconds,
+                exportDelayDays    : policy.exportDelayDays,
+                visibilityEnabled  : policy.visibilityEnabled,
+                visibilityWls      : policy.visibilityWls,
+                policyRevision     : policy.policyRevision,
+                effectiveFrom      : policy.effectiveFrom,
+                lastUpdated        : policy.lastUpdated,
+                cacheTtlSeconds    : cacheTtlSeconds,
+                import_enabled     : policy.importEnabled,
+                export_enabled     : policy.exportEnabled,
+                export_delay_days  : policy.exportDelayDays,
+                visibility_wls     : policy.visibilityWls
+        ]
+        TraderAccount trader = traderAccountService?.findByWhiteLabelId(policy.whiteLabel.id)
+        result.traderAccount = traderAccountService?.asPolicyPayload(trader)
+        result
+    }
+
+    private void applyCacheHeaders() {
+        int ttl = cacheTtlSeconds
+        response.setHeader('Cache-Control', "private, max-age=${ttl}")
+        response.setHeader('X-Policy-Cache-Ttl', ttl.toString())
+    }
+
+    private int getCacheTtlSeconds() {
+        grailsApplication?.config?.getProperty('app.policy.cacheTtlSeconds', Integer, 300)
+    }
+}

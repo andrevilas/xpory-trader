@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.grails</groupId>
+  <artifactId>grails-web-testing-support</artifactId>
+  <version>1.1.4</version>
+  <dependencies>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy</artifactId>
+      <version>2.4.12</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.22</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.grails.plugins</groupId>
+      <artifactId>gsp</artifactId>
+      <version>3.3.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.grails</groupId>
+      <artifactId>grails-plugin-rest</artifactId>
+      <version>3.3.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.grails</groupId>
+      <artifactId>grails-plugin-interceptors</artifactId>
+      <version>3.3.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.1.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.grails</groupId>
+      <artifactId>grails-testing-support</artifactId>
+      <version>1.1.4</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+  <name>Grails Testing Support</name>
+  <description>Support for writing concise expressive tests for Grails artifacts</description>
+  <url>https://github.com/grails/grails-testing-support</url>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>scm:git@github.com:grails/grails-testing-support.git</url>
+    <connection>scm:git@github.com:grails/grails-testing-support.git</connection>
+    <developerConnection>scm:git@github.com:grails/grails-testing-support.git</developerConnection>
+  </scm>
+  <developers>
+    <developer>
+      <id>jeffbrown</id>
+      <name>Jeff Brown</name>
+    </developer>
+    <developer>
+      <id>jameskleeh</id>
+      <name>James Kleeh</name>
+    </developer>
+  </developers>
+</project>

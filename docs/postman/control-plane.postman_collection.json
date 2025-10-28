@@ -1,0 +1,261 @@
+{
+  "info": {
+    "name": "XPORY Control Plane API",
+    "description": "Collection hitting the control-plane through the gateway. Attach the wl_a/wl_b client certificate (PKCS#12) in Postman's Settings -> Certificates for host localhost:8443.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:8443/cpservice",
+      "type": "string"
+    },
+    {
+      "key": "whiteLabelId",
+      "value": "REPLACE_WITH_ID",
+      "type": "string"
+    },
+    {
+      "key": "sourceId",
+      "value": "wl-a",
+      "type": "string"
+    },
+    {
+      "key": "targetId",
+      "value": "wl-b",
+      "type": "string"
+    },
+    {
+      "key": "signalId",
+      "value": "REPLACE_WITH_SIGNAL_ID",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Gateway",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/healthz"
+          }
+        }
+      ]
+    },
+    {
+      "name": "White Labels",
+      "item": [
+        {
+          "name": "Register white label",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo Partner\",\n  \"description\": \"Control plane onboarding test\",\n  \"contactEmail\": \"ops@example.com\",\n  \"status\": \"active\",\n  \"policy\": {\n    \"importEnabled\": true,\n    \"exportEnabled\": true,\n    \"exportDelaySeconds\": 30,\n    \"visibilityEnabled\": true,\n    \"policyRevision\": \"baseline\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/wls"
+          }
+        },
+        {
+          "name": "Get white label",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}"
+          }
+        },
+        {
+          "name": "Fetch baseline policy",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}/policies"
+          }
+        },
+        {
+          "name": "Update baseline policy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"importEnabled\": true,\n  \"exportEnabled\": true,\n  \"exportDelaySeconds\": 15,\n  \"visibilityEnabled\": false,\n  \"policyRevision\": \"v2\"\n}"
+            },
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}/policies"
+          }
+        },
+        {
+          "name": "Issue access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scopes\": [\"policies:read\", \"telemetry:ingest\"]\n}"
+            },
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}/token"
+          }
+        },
+        {
+          "name": "Rotate WL signing key",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}/keys/rotate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Telemetry",
+      "item": [
+        {
+          "name": "Submit telemetry events",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"events\": [\n    {\n      \"whiteLabelId\": \"{{whiteLabelId}}\",\n      \"nodeId\": \"edge-01\",\n      \"eventType\": \"inventory.synced\",\n      \"eventTimestamp\": \"2025-02-11T14:30:00Z\",\n      \"payload\": {\n        \"items\": 42,\n        \"status\": \"ok\"\n      }\n    },\n    {\n      \"whiteLabelId\": \"{{whiteLabelId}}\",\n      \"nodeId\": \"edge-02\",\n      \"eventType\": \"inventory.failed\",\n      \"payload\": {\n        \"items\": 5,\n        \"reason\": \"timeout\"\n      }\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/telemetry/events"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Relationships",
+      "item": [
+        {
+          "name": "Get relationship",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/relationships/{{sourceId}}/{{targetId}}"
+          }
+        },
+        {
+          "name": "Upsert relationship",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fxRate\": 1.23,\n  \"limitAmount\": 500000,\n  \"status\": \"active\",\n  \"notes\": \"Demo update\"\n}"
+            },
+            "url": "{{baseUrl}}/relationships/{{sourceId}}/{{targetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Policy Agent",
+      "item": [
+        {
+          "name": "Pull policies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"whiteLabelIds\": [\"{{whiteLabelId}}\"],\n  \"since\": \"2025-01-01T00:00:00Z\"\n}"
+            },
+            "url": "{{baseUrl}}/policies/pull"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Imbalance Signals",
+      "item": [
+        {
+          "name": "Submit signal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceId\": \"{{sourceId}}\",\n  \"targetId\": \"{{targetId}}\",\n  \"action\": \"block\",\n  \"reason\": \"Stress test\",\n  \"initiatedBy\": \"ops-bot\"\n}"
+            },
+            "url": "{{baseUrl}}/imbalance/signals"
+          }
+        },
+        {
+          "name": "Acknowledge signal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acknowledgedBy\": \"wl-agent\"\n}"
+            },
+            "url": "{{baseUrl}}/imbalance/signals/{{signalId}}/ack"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Trade balance",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/trade-balance"
+          }
+        }
+      ]
+    },
+    {
+      "name": "JWKS",
+      "item": [
+        {
+          "name": "Fetch JWKS",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/.well-known/jwks.json"
+          }
+        }
+      ]
+    }
+  ]
+}

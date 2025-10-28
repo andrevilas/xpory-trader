@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.grails.plugins</groupId>
+  <artifactId>converters</artifactId>
+  <version>3.3.1</version>
+  <dependencies>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+  <name>Grails Converters Plugin</name>
+  <description>Provides JSON and XML converters</description>
+  <url>https://github.com/grails-plugins/grails-plugin-converters</url>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/grails-plugins/grails-plugin-converters</url>
+    <connection>scm:git@github.com:grails-plugins/grails-plugin-converters.git</connection>
+    <developerConnection>scm:git@github.com:grails-plugins/grails-plugin-converters.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>Github Issues</system>
+    <url>https://github.com/grails-plugins/grails-plugin-converters/issues</url>
+  </issueManagement>
+  <developers>
+    <developer>
+      <id>graemerocher</id>
+      <name>Graeme Rocher</name>
+    </developer>
+  </developers>
+</project>

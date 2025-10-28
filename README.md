@@ -1,8 +1,8 @@
-# XporY Control Plane (Wave 0)
+# XporY Control Plane
 
 Control-plane service built with Grails 3.3 that anchors policy authority, identity, and telemetry ingestion for whitelabel (WL) partners.
 
-## Capabilities delivered in Wave 0
+## Capabilities delivered
 
 - **Whitelabel registry** – `POST /wls` to onboard WLs with baseline import/export/visibility policy defaults.
 - **Policy retrieval** – `GET /wls/{id}/policies` returns the persisted baseline configuration with p95 latency instrumentation.
@@ -126,9 +126,3 @@ Response `202 Accepted` summarises persisted event ids.
 
 Integration specs cover WL registration and telemetry persistence.
 
-## Next steps
-
-- Wire OpenTelemetry exporter (OTLP/Jaeger) as platform selects observability stack.
-- Replace Micrometer Simple registry with persistent backend (e.g. Prometheus) and publish p95 policy latency dashboards.
-- Extend telemetry schema once auditing and risk scoring requirements are fleshed out in Wave 1.
-# xpory-trader

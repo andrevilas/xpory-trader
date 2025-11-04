@@ -28,9 +28,8 @@ class GovernanceSigningService {
         byte[] signatureBytes = mac().doFinal(json.getBytes('UTF-8'))
         String encoded = signatureBytes.encodeBase64().toString()
         if (LOG.isDebugEnabled()) {
-            LOG.debug('Signing governance payload canonical={}', json)
+            LOG.debug('Signing governance payload for control plane response')
         }
-        System.err.println("Signing governance payload canonical=${json} signature=${encoded}")
         Date issuedAt = new Date()
         [
                 value     : encoded,

@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY . .
 RUN ./gradlew --no-daemon clean assemble
 
-FROM openjdk:8-jre-slim
+FROM eclipse-temurin:8-jre
 WORKDIR /opt/cpservice
 ENV JAVA_OPTS=""
 COPY --from=build /workspace/build/libs/*.war app.war

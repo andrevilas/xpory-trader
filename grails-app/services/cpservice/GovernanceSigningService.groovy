@@ -8,6 +8,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 import groovy.json.JsonOutput
 
@@ -26,6 +27,10 @@ class GovernanceSigningService {
         String json = JsonOutput.toJson(canonical)
         byte[] signatureBytes = mac().doFinal(json.getBytes('UTF-8'))
         String encoded = signatureBytes.encodeBase64().toString()
+        if (LOG.isDebugEnabled()) {
+            LOG.debug('Signing governance payload canonical={}', json)
+        }
+        System.err.println("Signing governance payload canonical=${json} signature=${encoded}")
         Date issuedAt = new Date()
         [
                 value     : encoded,
@@ -67,7 +72,11 @@ class GovernanceSigningService {
             return (value as Collection).collect { canonicalizeValue(it) }
         }
         if (value instanceof Date) {
-            return (value as Date).toInstant().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT)
+            return (value as Date)
+                    .toInstant()
+                    .truncatedTo(ChronoUnit.SECONDS)
+                    .atOffset(ZoneOffset.UTC)
+                    .format(DateTimeFormatter.ISO_INSTANT)
         }
         return value
     }

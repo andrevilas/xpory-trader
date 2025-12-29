@@ -4,7 +4,7 @@ Control-plane service built with Grails 3.3 that anchors policy authority, ident
 
 ## Capabilities delivered
 
-- **Whitelabel registry** – `POST /wls` to onboard WLs with baseline import/export/visibility policy defaults.
+- **Whitelabel registry** – `POST /wls` to onboard WLs with baseline import/export/visibility policy defaults; `PUT /wls/{id}` to update WL metadata (ex: `gatewayUrl`).
 - **Policy retrieval** – `GET /wls/{id}/policies` returns the persisted baseline configuration with p95 latency instrumentation.
 - **Token issuance** – `POST /wls/{id}/token` produces 5-minute JWTs with WL-scoped claims for downstream use.
 - **Telemetry intake** – `POST /telemetry/events` accepts WL node events and appends them to the Postgres-backed `cp_telemetry` log.
@@ -77,6 +77,15 @@ Response `201 Created`:
 }
 ```
 
+### `PUT /wls/{id}`
+Updates WL metadata (name, description, contactEmail, gatewayUrl, status).
+
+```json
+{
+  "gatewayUrl": "https://wl-importer.localhost"
+}
+```
+
 ### `GET /wls/{id}/policies`
 Returns the baseline policy for the WL. Instrumented with `cp.policies.fetch.latency` timer (targets p95 < 150 ms).
 
@@ -125,4 +134,3 @@ Response `202 Accepted` summarises persisted event ids.
 ```
 
 Integration specs cover WL registration and telemetry persistence.
-

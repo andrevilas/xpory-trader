@@ -78,7 +78,7 @@ The `CertificateRotationService` schedules a refresh job:
 1. Rotate for a tenant:
    ```bash
    curl -k --cert tls/wl-a/wl_a.p12:changeit --cert-type P12 \
-     -X POST https://localhost:8443/cpservice/wls/<WL_ID>/keys/rotate
+     -X POST https://cp.localhost/wls/<WL_ID>/keys/rotate
    ```
 2. Validate new tokens by issuing `POST /wls/{id}/token` and decoding with JWKS.
 

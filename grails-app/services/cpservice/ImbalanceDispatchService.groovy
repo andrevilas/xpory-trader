@@ -47,8 +47,8 @@ class ImbalanceDispatchService {
                 action        : signal.action,
                 reason        : signal.reason,
                 initiatedBy   : signal.initiatedBy,
-                effectiveFrom : signal.effectiveFrom,
-                effectiveUntil: signal.effectiveUntil
+                effectiveFrom : formatDate(signal.effectiveFrom),
+                effectiveUntil: formatDate(signal.effectiveUntil)
         ]
 
         String endpoint = normalizeUrl(target.gatewayUrl, '/control-plane/imbalance/signals')
@@ -169,5 +169,12 @@ class ImbalanceDispatchService {
             return trimmedBase + '/' + path
         }
         return trimmedBase + path
+    }
+
+    private String formatDate(Date value) {
+        if (!value) {
+            return null
+        }
+        return value.toInstant().atOffset(java.time.ZoneOffset.UTC).toString()
     }
 }

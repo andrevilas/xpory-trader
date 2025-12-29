@@ -78,6 +78,50 @@ class WhiteLabelController {
         ] as JSON)
     }
 
+    def update() {
+        String whiteLabelId = params.id
+        WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
+        if (!whiteLabel) {
+            render status: HttpStatus.NOT_FOUND.value()
+            return
+        }
+
+        Map payload = request.JSON as Map ?: [:]
+        if (payload.name != null) {
+            whiteLabel.name = payload.name
+        }
+        if (payload.description != null) {
+            whiteLabel.description = payload.description
+        }
+        if (payload.contactEmail != null) {
+            whiteLabel.contactEmail = payload.contactEmail
+        }
+        if (payload.gatewayUrl != null) {
+            whiteLabel.gatewayUrl = payload.gatewayUrl
+        }
+        if (payload.status != null) {
+            whiteLabel.status = payload.status
+        }
+
+        try {
+            whiteLabel.save(flush: true, failOnError: true)
+            render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
+                    id            : whiteLabel.id,
+                    name          : whiteLabel.name,
+                    description   : whiteLabel.description,
+                    contactEmail  : whiteLabel.contactEmail,
+                    gatewayUrl    : whiteLabel.gatewayUrl,
+                    status        : whiteLabel.status,
+                    baselinePolicy: policyAsMap(whiteLabel.baselinePolicy)
+            ] as JSON)
+        } catch (ValidationException ex) {
+            render status: HttpStatus.UNPROCESSABLE_ENTITY.value(), contentType: "application/json", text: ([
+                    error  : 'Validation failed',
+                    details: ex.errors?.allErrors?.collect { it.defaultMessage }
+            ] as JSON)
+        }
+    }
+
     def policies() {
         String whiteLabelId = params.id
         def responseBody = policyMetricsService.timePolicyFetch {

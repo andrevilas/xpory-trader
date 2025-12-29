@@ -6,7 +6,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | Endpoint | Method(s) | Description |
 |----------|-----------|-------------|
 | `/wls` | `GET`, `POST` | List registered white-label tenants or create a new entry. |
-| `/wls/{id}` | `GET` | Fetch metadata for a specific white-label. |
+| `/wls/{id}` | `GET`, `PUT` | Fetch or update metadata for a specific white-label (ex: `gatewayUrl`). |
 | `/wls/{id}/policies` | `GET`, `PUT` | Read or update the baseline policy package attached to the tenant. |
 | `/wls/{id}/token` | `POST` | Mint a scoped JWT for the tenant. |
 | `/wls/{id}/keys/rotate` | `POST` | Rotate the tenant-specific JWT signing key (new `kid`). |
@@ -19,7 +19,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting. |
 | `/.well-known/jwks.json` | `GET` | Public JWK set used to validate CP-issued JWTs. |
 
-See `cpservice/docs/postman/control-plane.postman_collection.json` for sample
+See `docs/postman/control-plane.postman_collection.json` for sample
 requests and payloads. All endpoints expect client certificates issued by the
 local XPORY PKI when accessed through the gateway.
 
@@ -40,6 +40,33 @@ In production with Nginx/NPM terminating TLS:
 
 Ensure `gatewayUrl` points to the WL public HTTPS host and that
 `/.well-known/jwks.json` remains accessible to WL nodes.
+
+## CP → WL dispatch contract (imbalance signals)
+Control Plane dispatches imbalance signals to the WL gateway:
+
+- `POST /control-plane/imbalance/signals`
+- `Authorization: Bearer <jwt>` (RS256, `aud` + `wlId` must match the target WL id)
+- `Content-Type: application/json`
+
+Payload fields:
+- `sourceId` (string, required)
+- `targetId` (string, required)
+- `action` (string, required: `block` | `unblock`)
+- `reason` (string, optional)
+- `initiatedBy` (string, optional)
+- `effectiveFrom` (string, optional, ISO-8601 with offset, prefer `Z`)
+- `effectiveUntil` (string, optional, ISO-8601 with offset, prefer `Z`)
+
+Example:
+```json
+{
+  "sourceId": "wl-exporter-id",
+  "targetId": "wl-importer-id",
+  "action": "block",
+  "reason": "imbalance threshold exceeded",
+  "effectiveFrom": "2025-12-29T15:13:30Z"
+}
+```
 
 Policy responses (`GET /wls/{id}/policies` and `POST /policies/pull`) now embed a
 `traderAccount` object whenever the Control Plane has issued Trader metadata for

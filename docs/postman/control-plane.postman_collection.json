@@ -1,13 +1,13 @@
 {
   "info": {
     "name": "XPORY Control Plane API",
-    "description": "Collection hitting the control-plane through the gateway. Attach the wl_a/wl_b client certificate (PKCS#12) in Postman's Settings -> Certificates for host localhost:8443.",
+    "description": "Collection hitting the control-plane through the gateway. Attach the wl-client client certificate (PKCS#12) in Postman's Settings -> Certificates for host cp.localhost.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://localhost:8443/cpservice",
+      "value": "https://cp.localhost",
       "type": "string"
     },
     {
@@ -68,6 +68,23 @@
           "name": "Get white label",
           "request": {
             "method": "GET",
+            "url": "{{baseUrl}}/wls/{{whiteLabelId}}"
+          }
+        },
+        {
+          "name": "Update white label",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gatewayUrl\": \"https://wl-importer.localhost\"\n}"
+            },
             "url": "{{baseUrl}}/wls/{{whiteLabelId}}"
           }
         },

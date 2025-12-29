@@ -6,7 +6,9 @@ class UrlMappings {
         "/wls"(controller: 'whiteLabel') {
             action = [GET: 'index', POST: 'save']
         }
-        "/wls/$id"(controller: 'whiteLabel', action: 'show', method: 'GET')
+        "/wls/$id"(controller: 'whiteLabel') {
+            action = [GET: 'show', PUT: 'update']
+        }
         "/wls/$id/policies"(controller: 'whiteLabel') {
             action = [GET: 'policies', PUT: 'updatePolicies']
         }

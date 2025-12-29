@@ -8,7 +8,7 @@ storage.
 
 ```bash
 curl -k --cert tls/wl-a/wl_a.p12:changeit --cert-type P12 \
-  -X POST https://localhost:8443/cpservice/wls/<WL_ID>/keys/rotate
+  -X POST https://cp.localhost/wls/<WL_ID>/keys/rotate
 ```
 
 The response returns the new `kid`, which is also published via
@@ -23,7 +23,7 @@ For example:
 ```bash
 for wl in wl-a wl-b; do
   curl -k --cert tls/${wl}/${wl}.p12:changeit --cert-type P12 \
-    -X POST "https://localhost:8443/cpservice/wls/${wl}/keys/rotate"
+    -X POST "https://cp.localhost/wls/${wl}/keys/rotate"
 done
 ```
 

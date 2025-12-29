@@ -89,21 +89,6 @@ databaseChangeLog = {
         }
     }
 
-    changeSet(author: "codex", id: "20250302-01-extend-policies") {
-        addColumn(tableName: "cp_white_label_policies") {
-            column(name: "export_delay_days", type: "integer", defaultValueNumeric: "0") {
-                constraints(nullable: "false")
-            }
-            column(name: "visibility_wls", type: "text")
-        }
-        grailsChange {
-            change {
-                sql.execute("UPDATE cp_white_label_policies SET visibility_wls = '[]' WHERE visibility_wls IS NULL")
-            }
-        }
-        addNotNullConstraint(tableName: "cp_white_label_policies", columnName: "visibility_wls", columnDataType: "text")
-    }
-
     changeSet(author: "codex", id: "20250211-02-create-white-label-policies") {
         createTable(tableName: "cp_white_label_policies") {
             column(name: "id", type: "varchar(36)") {
@@ -151,6 +136,21 @@ databaseChangeLog = {
                 referencedTableName: "cp_white_labels",
                 onDelete: "CASCADE"
         )
+    }
+
+    changeSet(author: "codex", id: "20250302-01-extend-policies") {
+        addColumn(tableName: "cp_white_label_policies") {
+            column(name: "export_delay_days", type: "integer", defaultValueNumeric: "0") {
+                constraints(nullable: "false")
+            }
+            column(name: "visibility_wls", type: "text")
+        }
+        grailsChange {
+            change {
+                sql.execute("UPDATE cp_white_label_policies SET visibility_wls = '[]' WHERE visibility_wls IS NULL")
+            }
+        }
+        addNotNullConstraint(tableName: "cp_white_label_policies", columnName: "visibility_wls", columnDataType: "text")
     }
 
     changeSet(author: "codex", id: "20250211-03-create-telemetry") {

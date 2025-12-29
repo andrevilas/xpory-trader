@@ -95,9 +95,9 @@ dataSource:
     jmxExport: true
     driverClassName: org.postgresql.Driver
     dialect: org.hibernate.dialect.PostgreSQL95Dialect
-    username: ${DB_USERNAME:xpory_cp}
-    password: ${DB_PASSWORD:xpory_cp}
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory_cp}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory-cp}
     properties:
         jmxEnabled: true
         initialSize: 5
@@ -132,7 +132,7 @@ environments:
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
 
 server:
-    port: ${SERVER_PORT:8080}
+    port: 8080
     ssl:
         enabled: ${SERVER_SSL_ENABLED:false}
         key-store: ${SERVER_SSL_KEY_STORE:}
@@ -150,6 +150,10 @@ security:
         signingKeyFile: ${JWT_SIGNING_KEY_FILE:}
         envKeyVar: CP_JWT_SIGNING_KEY
         fallbackSeed: xpory-control-plane
+    admin:
+        enabled: ${ADMIN_AUTH_ENABLED:true}
+        allowedCertSubjects: ${ADMIN_CERT_SUBJECTS:}
+        allowedCertFingerprints: ${ADMIN_CERT_FINGERPRINTS:}
     mtls:
         enabled: ${MTLS_ENABLED:true}
         trustStore: ${MTLS_TRUST_STORE:}
@@ -160,6 +164,13 @@ security:
 
 governance:
     signatureSecret: ${APP_CP_GOVERNANCE_SIGNING_SECRET:}
+
+imbalance:
+    dispatch:
+        maxAttempts: ${IMBALANCE_DISPATCH_MAX_ATTEMPTS:3}
+        backoffMillis: ${IMBALANCE_DISPATCH_BACKOFF_MILLIS:500}
+        connectTimeoutMillis: ${IMBALANCE_DISPATCH_CONNECT_TIMEOUT:5000}
+        readTimeoutMillis: ${IMBALANCE_DISPATCH_READ_TIMEOUT:15000}
 
 app:
     policy:

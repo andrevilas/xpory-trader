@@ -1,0 +1,121 @@
+# Control Plane API Overview
+
+The control plane exposes a lightweight REST surface area secured by the Nginx
+mTLS gateway. The table below summarises the active endpoints.
+
+| Endpoint | Method(s) | Description |
+|----------|-----------|-------------|
+| `/wls` | `GET`, `POST` | List registered white-label tenants or create a new entry. |
+| `/wls/{id}` | `GET` | Fetch metadata for a specific white-label. |
+| `/wls/{id}/policies` | `GET`, `PUT` | Read or update the baseline policy package attached to the tenant. |
+| `/wls/{id}/token` | `POST` | Mint a scoped JWT for the tenant. |
+| `/wls/{id}/keys/rotate` | `POST` | Rotate the tenant-specific JWT signing key (new `kid`). |
+| `/wls/{id}/trader` | `GET`, `POST` | Inspect or authorise the Trader Account metadata for a WL; propagated to nodes via policy packages. |
+| `/relationships/{src}/{dst}` | `GET`, `PUT` | Inspect or upsert the bilateral configuration (FX, limits, status) between two tenants. |
+| `/policies/pull` | `POST` | Bulk export baseline policy data for Policy Agents (supports filtering by ID and `since`). |
+| `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
+| `/imbalance/signals/{id}/ack` | `POST` | Confirm asynchronous receipt of a signal by the WL, capturing ack metadata. |
+| `/telemetry/events` | `POST` | Existing ingestion endpoint for event/ledger telemetry. |
+| `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting. |
+| `/.well-known/jwks.json` | `GET` | Public JWK set used to validate CP-issued JWTs. |
+
+See `cpservice/docs/postman/control-plane.postman_collection.json` for sample
+requests and payloads. All endpoints expect client certificates issued by the
+local XPORY PKI when accessed through the gateway.
+
+Admin endpoints (`/wls`, `/relationships`, `/imbalance`, `/wls/{id}/policies`,
+`/wls/{id}/trader`, `/wls/{id}/keys/rotate`, `/reports/trade-balance`) also
+enforce client-certificate authentication on the CP. Optional allowlists:
+
+- `ADMIN_CERT_SUBJECTS` (comma-separated X.500 subject DNs)
+- `ADMIN_CERT_FINGERPRINTS` (comma-separated SHA-256 fingerprints)
+
+## mTLS direction (production)
+
+In production with Nginx/NPM terminating TLS:
+
+- **WL → CP** uses mTLS (client cert at the CP gateway).
+- **CP → WL** uses HTTPS + JWT, without mTLS, unless the WL gateway is explicitly
+  configured to require client certificates.
+
+Ensure `gatewayUrl` points to the WL public HTTPS host and that
+`/.well-known/jwks.json` remains accessible to WL nodes.
+
+Policy responses (`GET /wls/{id}/policies` and `POST /policies/pull`) now embed a
+`traderAccount` object whenever the Control Plane has issued Trader metadata for
+the tenant. WL Nodes should persist the Trader locally (idempotently) and reply
+with `trader.account.confirmed` telemetry once the record is stored.
+
+## JWT Scopes Contract
+
+Tokens issued by `/wls/{id}/token` must include the scopes required by the WL
+runtime. The canonical set for the trader sprint is:
+
+- `policies:read` — fetch policies via `/wls/{id}/policies` or `/policies/pull`.
+- `telemetry:write` — emit telemetry to `/telemetry/events`.
+- `offers:sync` — import sync job access.
+- `trader:purchase` — authorize `/trader/purchase` on exporter WLs.
+
+Tokens are RS256 and validated via `/.well-known/jwks.json` (`kid` required).
+
+## Telemetry events
+
+Canonical schema for cross-WL trade telemetry is defined in
+`docs/sprints/trader/trader-purchase-telemetry.md`.
+
+## WhiteLabel fields
+
+The WL registry includes `gatewayUrl` (base URL for CP → WL dispatches such as
+imbalance signals). Example:
+
+```json
+{
+  "gatewayUrl": "https://wl-a.xpory.app"
+}
+```
+
+## Policy Package Schema
+
+The policy payload returned by `/wls/{id}/policies` and `/policies/pull` now
+includes the following governance controls:
+
+- `import_enabled` (`boolean`): whether the WL may ingest offers from other WLs.
+- `export_enabled` (`boolean`): whether export is globally allowed.
+- `export_delay_days` (`integer`): minimum number of days before a newly created
+  offer may be exported.
+- `visibility_wls` (`array<string>`): WL identifiers permitted to discover this
+  WL’s exported offers.
+- `traderAccount` (`object`): Trader metadata synchronised during Wave 0.
+- `signature` (`object`): `{ value, algorithm, issuedAt }` HMAC over the full
+  response payload, signed with `APP_CP_GOVERNANCE_SIGNING_SECRET`.
+- `updatedBy` / `updatedSource`: audit fields for the last policy update.
+
+Existing camelCase fields remain for backwards compatibility, but WL nodes
+should prefer the snake_case variants.
+
+## Relationship Package Schema
+
+The relationship payload returned by `/relationships/{src}/{dst}` now exposes:
+
+- `source_wl_id`, `dst_wl_id`: identifiers of the bilateral pair.
+- `fx_rate` (`decimal`): cross-currency conversion factor.
+- `imbalance_limit` (`decimal`): risk ceiling (used by later waves).
+- `status` (`string`): `active`, `paused`, or `blocked`.
+- `signature` (`object`): HMAC signature over the response body.
+- `updatedBy` / `updatedSource`: audit fields for the last relationship update.
+
+Every successful policy or relationship pull is logged in telemetry as
+`POLICY_PACKAGE_SENT` or `RELATIONSHIP_PACKAGE_SENT` respectively. WL nodes
+should verify signatures using the shared secret and cache the payload locally.
+
+## Trade balance report
+
+`/reports/trade-balance` now enriches relationships with `tradeMetrics`
+aggregated from `TRADER_PURCHASE` telemetry and includes
+`totals.tradeStatusTotals` (CONFIRMED/PENDING/REJECTED/UNKNOWN).
+
+**Secrets**
+
+- Control Plane signs packages with `APP_CP_GOVERNANCE_SIGNING_SECRET`.
+- WL nodes must configure the same secret via `APP_CP_GOVERNANCE_SIGNING_SECRET`
+  to validate signatures.

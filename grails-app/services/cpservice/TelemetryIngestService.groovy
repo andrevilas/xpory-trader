@@ -12,6 +12,7 @@ import java.time.format.DateTimeParseException
 class TelemetryIngestService {
 
     TraderAccountService traderAccountService
+    TradeMetricsService tradeMetricsService
 
     List<TelemetryEvent> ingest(Collection<Map> events) {
         if (!events) {
@@ -20,6 +21,7 @@ class TelemetryIngestService {
         events.collect { Map event ->
             TelemetryEvent stored = persistEvent(event)
             traderAccountService?.processTelemetry(stored, event)
+            recordTradeMetrics(event)
             stored
         }
     }
@@ -68,5 +70,18 @@ class TelemetryIngestService {
             return payload.toString()
         }
         return JsonOutput.toJson(payload ?: [:])
+    }
+
+    private void recordTradeMetrics(Map eventPayload) {
+        if (!eventPayload) {
+            return
+        }
+        String eventType = eventPayload.eventType ?: 'unspecified'
+        if (eventType != 'TRADER_PURCHASE') {
+            return
+        }
+        Map payload = (eventPayload.payload instanceof Map) ? (Map) eventPayload.payload : [:]
+        String status = payload.status?.toString()?.toUpperCase() ?: 'UNKNOWN'
+        tradeMetricsService?.recordTradeStatus(status)
     }
 }

@@ -24,6 +24,7 @@ class WhiteLabelRegistrationService {
                 name: payload.name,
                 description: payload.description,
                 contactEmail: payload.contactEmail,
+                gatewayUrl: payload.gatewayUrl,
                 status: payload.status ?: 'active'
         )
 

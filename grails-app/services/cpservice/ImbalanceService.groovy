@@ -16,12 +16,17 @@ class ImbalanceService {
         if (!payload.action) {
             throw new IllegalArgumentException('action is required')
         }
+        String updatedBy = payload.updatedBy ?: payload.updated_by ?: payload.initiatedBy
+        String updatedSource = payload.updatedSource ?: payload.updated_source ?: payload.source
         ImbalanceSignal signal = new ImbalanceSignal(
-                sourceId     : sourceId,
-                targetId     : targetId,
-                action       : payload.action.toString().toLowerCase(),
-                reason       : payload.reason?.toString(),
-                initiatedBy  : payload.initiatedBy?.toString()
+                sourceId      : sourceId,
+                targetId      : targetId,
+                action        : payload.action.toString().toLowerCase(),
+                reason        : payload.reason?.toString(),
+                initiatedBy   : payload.initiatedBy?.toString(),
+                updatedBy     : updatedBy?.toString(),
+                updatedSource : updatedSource?.toString(),
+                dispatchStatus: 'pending'
         )
         if (payload.effectiveFrom) {
             signal.effectiveFrom = coerceDate(payload.effectiveFrom)
@@ -46,6 +51,9 @@ class ImbalanceService {
             signal.acknowledged = true
             signal.acknowledgedBy = acknowledgedBy ?: 'unknown'
             signal.acknowledgedAt = new Date()
+            signal.dispatchStatus = 'acknowledged'
+            signal.updatedBy = acknowledgedBy ?: signal.updatedBy
+            signal.updatedSource = signal.updatedSource ?: 'ack'
             signal.save(flush: true, failOnError: true)
             signalMetricsService?.recordAcknowledgement(signal.action)
         }

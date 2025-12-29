@@ -31,6 +31,12 @@ class RelationshipController {
         String src = params.src
         String dst = params.dst
         Map payload = request.JSON as Map ?: [:]
+        if (!payload.updatedBy) {
+            payload.updatedBy = request.getHeader('X-Client-Id') ?: request.getHeader('X-Admin-Id')
+        }
+        if (!payload.updatedSource) {
+            payload.updatedSource = request.getHeader('X-Client-Source') ?: request.getHeader('X-Source')
+        }
         try {
             Relationship relationship = relationshipService.upsert(src, dst, payload)
             Map body = toJson(relationship)
@@ -60,8 +66,12 @@ class RelationshipController {
                 imbalance_limit     : relationship.limitAmount,
                 status              : relationship.status?.toLowerCase(),
                 notes               : relationship.notes,
+                updatedBy           : relationship.updatedBy,
+                updatedSource       : relationship.updatedSource,
                 updatedAt           : relationship.lastUpdated,
-                updated_at          : relationship.lastUpdated
+                updated_at          : relationship.lastUpdated,
+                updated_by          : relationship.updatedBy,
+                updated_source      : relationship.updatedSource
         ]
     }
 }

@@ -14,6 +14,8 @@ class Relationship {
     BigDecimal limitAmount = BigDecimal.ZERO
     String status = 'active'
     String notes
+    String updatedBy
+    String updatedSource
 
     Date dateCreated
     Date lastUpdated
@@ -34,6 +36,8 @@ class Relationship {
         limitAmount nullable: false, min: 0.0G
         status inList: ['active', 'blocked', 'inactive', 'paused']
         notes nullable: true, maxSize: 500
+        updatedBy nullable: true, maxSize: 120
+        updatedSource nullable: true, maxSize: 120
         targetId unique: 'sourceId', validator: { val, obj ->
             if (val == obj.sourceId) {
                 return 'relationship.sameParty'

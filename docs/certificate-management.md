@@ -40,31 +40,24 @@ openssl pkcs12 -export \
 - Certificates must include the WL identifier in the SAN (e.g. `URI:wl://{wlId}`) – enforced by corporate PKI policy.
 - Revocation checks are handled upstream (OCSP/CRL). Upstream ingress should terminate sessions if certificates are revoked.
 
-## 2. JWT Issuance & Validation
+## 2. JWT Issuance & Validation (JWKS / RS256)
 
 ### Signing material
 
-`JwtService` reads the signing key in the following order:
-
-1. `JWT_SIGNING_KEY_FILE` (base64 string stored on disk).
-2. `JWT_SIGNING_KEY` environment variable.
-3. `CP_JWT_SIGNING_KEY` fallback environment variable.
-
-Keys must be 256-bit (32-byte) minimum for HS256. Generate a compliant key:
-
-```bash
-openssl rand -base64 32 > jwt-signing.key
-```
+`JwtService` issues **RS256** tokens using per-WL RSA key pairs stored in
+`cp_white_label_keys`. Each token is signed with the active key for the WL and
+includes a `kid` header. Public keys are exposed via `/.well-known/jwks.json`.
 
 ### Token characteristics
 
 - TTL capped at 300 seconds (`JWT_TTL_SECONDS` override allowed for shorter values).
-- Claims include `sub` (WL id), `scopes` array, `iss` (`xpory-control-plane`).
+- Claims include `sub` (WL id), `wlId`, `scopes` array, `iss` (`xpory-control-plane`), `aud` (WL id).
+- `kid` header is required and must match an active key in JWKS.
 - `JwtService.decode(token)` is available for resource servers that co-locate with the CP.
 
 ### Validation checklist for consumers
 
-- Verify signature with the shared secret.
+- Verify signature with the JWKS public key that matches `kid`.
 - Ensure `exp` is in the future and not more than 5 minutes away from `iat`.
 - Restrict behaviour to the scopes in the token payload.
 
@@ -73,7 +66,7 @@ openssl rand -base64 32 > jwt-signing.key
 | Asset | Rotation trigger | Automation hook |
 |-------|------------------|-----------------|
 | TLS server certificate | Corporate CA pushes new cert bundle | Replace files referenced by `SERVER_SSL_KEY_STORE` & `SERVER_SSL_TRUST_STORE` and restart pods/containers. |
-| JWT signing key | Scheduled task (default 90 days) | Update secret at source (`JWT_SIGNING_KEY` or file). The control-plane detects the change during the scheduled refresh and reloads without restart. |
+| JWT signing key | WL key expires or manual rotation | Call `POST /wls/{id}/keys/rotate` (per WL) or bulk rotate; JWKS updates immediately. |
 
 The `CertificateRotationService` schedules a refresh job:
 
@@ -82,12 +75,12 @@ The `CertificateRotationService` schedules a refresh job:
 
 ### Manual rotate JWT key without restart
 
-1. Write the new base64 key to `JWT_SIGNING_KEY_FILE` (or update the secret backing `JWT_SIGNING_KEY`).
-2. Call `POST /internal/ops/rotate-jwt` (future wave) or use the Grails console:
+1. Rotate for a tenant:
    ```bash
-   ./grailsw eval "ctx.jwtService.refreshSigningMaterial()"
+   curl -k --cert tls/wl-a/wl_a.p12:changeit --cert-type P12 \
+     -X POST https://localhost:8443/cpservice/wls/<WL_ID>/keys/rotate
    ```
-3. Validate new tokens by issuing `POST /wls/{id}/token` and decoding.
+2. Validate new tokens by issuing `POST /wls/{id}/token` and decoding with JWKS.
 
 ### Validating successful TLS rotation
 
@@ -97,7 +90,7 @@ The `CertificateRotationService` schedules a refresh job:
 
 ## 4. Incident response
 
-- In case of compromised JWT secret, overwrite the secret and call `refreshSigningMaterial()` immediately. Invalidate outstanding tokens by reducing `JWT_TTL_SECONDS` temporarily (e.g. set to 60) before rollout.
+- In case of compromised JWT key, rotate the affected WL key immediately and revoke the old key (set inactive). Optionally reduce `JWT_TTL_SECONDS` temporarily (e.g. 60) to shorten exposure.
 - For revoked WL client certificates, update the CRL/OCSP upstream. Additionally, flag the WL as `inactive` via `POST /wls` update (future API) to stop policy exports.
 
 ## 5. Future enhancements
@@ -105,4 +98,3 @@ The `CertificateRotationService` schedules a refresh job:
 - Integrate with a corporate secrets manager instead of file/env secrets.
 - Emit rotation events into the telemetry stream for auditability.
 - Expose readiness probe that validates trust-store currency.
-

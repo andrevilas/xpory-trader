@@ -27,6 +27,7 @@ class WhiteLabelController {
                             name          : wl.name,
                             description   : wl.description,
                             contactEmail  : wl.contactEmail,
+                            gatewayUrl    : wl.gatewayUrl,
                             status        : wl.status,
                             baselinePolicy: policyAsMap(wl.baselinePolicy)
                     ]
@@ -44,6 +45,7 @@ class WhiteLabelController {
                     name          : wl.name,
                     description   : wl.description,
                     contactEmail  : wl.contactEmail,
+                    gatewayUrl    : wl.gatewayUrl,
                     status        : wl.status,
                     baselinePolicy: policyAsMap(wl.baselinePolicy)
             ] as JSON)
@@ -70,6 +72,7 @@ class WhiteLabelController {
                 name          : whiteLabel.name,
                 description   : whiteLabel.description,
                 contactEmail  : whiteLabel.contactEmail,
+                gatewayUrl    : whiteLabel.gatewayUrl,
                 status        : whiteLabel.status,
                 baselinePolicy: policyAsMap(whiteLabel.baselinePolicy)
         ] as JSON)
@@ -98,6 +101,12 @@ class WhiteLabelController {
     def updatePolicies() {
         String whiteLabelId = params.id
         Map payload = request.JSON as Map ?: [:]
+        if (!payload.updatedBy) {
+            payload.updatedBy = request.getHeader('X-Client-Id') ?: request.getHeader('X-Admin-Id')
+        }
+        if (!payload.updatedSource) {
+            payload.updatedSource = request.getHeader('X-Client-Source') ?: request.getHeader('X-Source')
+        }
         try {
             WhiteLabelPolicy policy = whiteLabelPolicyService.updateBaseline(whiteLabelId, payload)
         applyCacheHeaders()
@@ -143,13 +152,17 @@ class WhiteLabelController {
                 visibilityEnabled  : policy.visibilityEnabled,
                 visibilityWls      : policy.visibilityWls,
                 policyRevision     : policy.policyRevision,
+                updatedBy          : policy.updatedBy,
+                updatedSource      : policy.updatedSource,
                 effectiveFrom      : policy.effectiveFrom,
                 lastUpdated        : policy.lastUpdated,
                 cacheTtlSeconds    : cacheTtlSeconds,
                 import_enabled     : policy.importEnabled,
                 export_enabled     : policy.exportEnabled,
                 export_delay_days  : policy.exportDelayDays,
-                visibility_wls     : policy.visibilityWls
+                visibility_wls     : policy.visibilityWls,
+                updated_by         : policy.updatedBy,
+                updated_source     : policy.updatedSource
         ]
         TraderAccount trader = traderAccountService?.findByWhiteLabelId(policy.whiteLabel.id)
         result.traderAccount = traderAccountService?.asPolicyPayload(trader)

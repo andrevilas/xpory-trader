@@ -9,11 +9,19 @@ class ImbalanceController {
     static responseFormats = ['json']
 
     ImbalanceService imbalanceService
+    ImbalanceDispatchService imbalanceDispatchService
 
     def submit() {
         Map payload = request.JSON as Map ?: [:]
+        if (!payload.updatedBy) {
+            payload.updatedBy = request.getHeader('X-Client-Id') ?: request.getHeader('X-Admin-Id')
+        }
+        if (!payload.updatedSource) {
+            payload.updatedSource = request.getHeader('X-Client-Source') ?: request.getHeader('X-Source')
+        }
         try {
             ImbalanceSignal signal = imbalanceService.record(payload)
+            imbalanceDispatchService?.dispatch(signal)
             render status: HttpStatus.ACCEPTED.value(), contentType: "application/json", text: ([
                     id          : signal.id,
                     sourceId    : signal.sourceId,
@@ -21,9 +29,14 @@ class ImbalanceController {
                     action      : signal.action,
                     reason      : signal.reason,
                     initiatedBy : signal.initiatedBy,
+                    updatedBy   : signal.updatedBy,
+                    updatedSource: signal.updatedSource,
                     effectiveFrom: signal.effectiveFrom,
                     effectiveUntil: signal.effectiveUntil,
-                    acknowledged : signal.acknowledged
+                    acknowledged : signal.acknowledged,
+                    dispatchStatus: signal.dispatchStatus,
+                    dispatchAttempts: signal.dispatchAttempts,
+                    dispatchError: signal.dispatchError
             ] as JSON)
         } catch (IllegalArgumentException ex) {
             render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
@@ -45,7 +58,10 @@ class ImbalanceController {
                     id            : signal.id,
                     acknowledged  : signal.acknowledged,
                     acknowledgedBy: signal.acknowledgedBy,
-                    acknowledgedAt: signal.acknowledgedAt
+                    acknowledgedAt: signal.acknowledgedAt,
+                    dispatchStatus: signal.dispatchStatus,
+                    updatedBy     : signal.updatedBy,
+                    updatedSource : signal.updatedSource
             ] as JSON)
         } catch (IllegalArgumentException ex) {
             render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)

@@ -22,6 +22,8 @@ class WhiteLabelPolicy {
     boolean visibilityEnabled = false
     String visibilityWlsJson = '[]'
     String policyRevision = 'baseline'
+    String updatedBy
+    String updatedSource
     Date effectiveFrom = new Date()
 
     Date dateCreated
@@ -41,6 +43,8 @@ class WhiteLabelPolicy {
         exportDelaySeconds nullable: false, min: 0, max: 86400
         exportDelayDays nullable: false, min: 0, max: 365
         policyRevision blank: false, maxSize: 50
+        updatedBy nullable: true, maxSize: 120
+        updatedSource nullable: true, maxSize: 120
         effectiveFrom nullable: false
         visibilityWlsJson nullable: false
     }

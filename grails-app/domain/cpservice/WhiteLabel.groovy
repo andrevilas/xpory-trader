@@ -14,6 +14,7 @@ class WhiteLabel {
     String name
     String description
     String contactEmail
+    String gatewayUrl
     String status = 'active'
 
     Date dateCreated
@@ -31,6 +32,7 @@ class WhiteLabel {
         name blank: false, unique: true, maxSize: 120
         description nullable: true, maxSize: 500
         contactEmail blank: false, email: true, maxSize: 150
+        gatewayUrl nullable: true, maxSize: 500
         status inList: ['active', 'inactive']
     }
 }

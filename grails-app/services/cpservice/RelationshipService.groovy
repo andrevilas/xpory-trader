@@ -33,6 +33,12 @@ class RelationshipService {
         if (payload.containsKey('notes')) {
             rel.notes = payload.notes?.toString()
         }
+        if (payload.containsKey('updatedBy') || payload.containsKey('updated_by')) {
+            rel.updatedBy = (payload.updatedBy ?: payload.updated_by)?.toString()
+        }
+        if (payload.containsKey('updatedSource') || payload.containsKey('updated_source') || payload.containsKey('source')) {
+            rel.updatedSource = (payload.updatedSource ?: payload.updated_source ?: payload.source)?.toString()
+        }
 
         rel.save(failOnError: true, flush: true)
         rel

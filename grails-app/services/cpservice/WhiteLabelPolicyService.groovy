@@ -1,6 +1,7 @@
 package cpservice
 
 import grails.gorm.transactions.Transactional
+import groovy.json.JsonOutput
 
 @Transactional(readOnly = true)
 class WhiteLabelPolicyService {
@@ -46,6 +47,8 @@ class WhiteLabelPolicyService {
         }
 
         boolean drifted = false
+        String updatedBy = payload.updatedBy ?: payload.updated_by
+        String updatedSource = payload.updatedSource ?: payload.updated_source ?: payload.source
 
         if (payload.containsKey('importEnabled')) {
             boolean newVal = toBoolean(payload.importEnabled)
@@ -123,11 +126,19 @@ class WhiteLabelPolicyService {
             }
         }
 
+        if (updatedBy) {
+            policy.updatedBy = updatedBy.toString()
+        }
+        if (updatedSource) {
+            policy.updatedSource = updatedSource.toString()
+        }
+
         policy.save(failOnError: true, flush: true)
         whiteLabel.baselinePolicy = policy
         whiteLabel.save(failOnError: true, flush: true)
         if (drifted) {
             policyMetricsService?.recordPolicyDrift(whiteLabelId)
+            savePolicyRevision(policy, whiteLabel, updatedBy, updatedSource)
         }
         return policy
     }
@@ -152,5 +163,30 @@ class WhiteLabelPolicyService {
                     .findAll { it }
         }
         []
+    }
+
+    private void savePolicyRevision(WhiteLabelPolicy policy, WhiteLabel whiteLabel, String updatedBy, String updatedSource) {
+        Map snapshot = [
+                whiteLabelId     : whiteLabel.id,
+                importEnabled    : policy.importEnabled,
+                exportEnabled    : policy.exportEnabled,
+                exportDelaySeconds: policy.exportDelaySeconds,
+                exportDelayDays  : policy.exportDelayDays,
+                visibilityEnabled: policy.visibilityEnabled,
+                visibilityWls    : policy.visibilityWls,
+                policyRevision   : policy.policyRevision,
+                effectiveFrom    : policy.effectiveFrom,
+                updatedBy        : policy.updatedBy,
+                updatedSource    : policy.updatedSource
+        ]
+        new WhiteLabelPolicyRevision(
+                policy        : policy,
+                whiteLabel    : whiteLabel,
+                policyRevision: policy.policyRevision,
+                payload       : JsonOutput.toJson(snapshot),
+                updatedBy     : updatedBy,
+                updatedSource : updatedSource,
+                effectiveFrom : policy.effectiveFrom
+        ).save(failOnError: true, flush: true)
     }
 }

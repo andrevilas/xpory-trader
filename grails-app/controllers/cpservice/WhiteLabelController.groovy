@@ -3,6 +3,7 @@ package cpservice
 import grails.core.GrailsApplication
 import grails.validation.ValidationException
 import grails.converters.JSON
+import groovy.json.JsonSlurper
 import org.springframework.http.HttpStatus
 
 class WhiteLabelController {
@@ -19,7 +20,37 @@ class WhiteLabelController {
     GovernanceTelemetryService governanceTelemetryService
 
     def index() {
-        List<WhiteLabel> whiteLabels = WhiteLabel.list(sort: 'name', order: 'asc')
+        Integer limit = params.int('limit') ?: 100
+        Integer offset = params.int('offset') ?: 0
+        limit = Math.min(limit, 200)
+        String status = params.status
+        String q = params.q
+
+        List<WhiteLabel> whiteLabels = WhiteLabel.createCriteria().list(max: limit, offset: offset) {
+            if (status) {
+                eq('status', status)
+            }
+            if (q) {
+                or {
+                    ilike('name', "%${q}%")
+                    ilike('id', "%${q}%")
+                }
+            }
+            order('name', 'asc')
+        }
+
+        Number total = WhiteLabel.createCriteria().count {
+            if (status) {
+                eq('status', status)
+            }
+            if (q) {
+                or {
+                    ilike('name', "%${q}%")
+                    ilike('id', "%${q}%")
+                }
+            }
+        }
+
         render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
                 items: whiteLabels.collect { WhiteLabel wl ->
                     [
@@ -32,7 +63,7 @@ class WhiteLabelController {
                             baselinePolicy: policyAsMap(wl.baselinePolicy)
                     ]
                 },
-                count: whiteLabels.size()
+                count: total
         ] as JSON)
     }
 
@@ -90,13 +121,13 @@ class WhiteLabelController {
         if (payload.name != null) {
             whiteLabel.name = payload.name
         }
-        if (payload.description != null) {
+        if (payload.containsKey('description')) {
             whiteLabel.description = payload.description
         }
         if (payload.contactEmail != null) {
             whiteLabel.contactEmail = payload.contactEmail
         }
-        if (payload.gatewayUrl != null) {
+        if (payload.containsKey('gatewayUrl')) {
             whiteLabel.gatewayUrl = payload.gatewayUrl
         }
         if (payload.status != null) {
@@ -165,6 +196,41 @@ class WhiteLabelController {
         }
     }
 
+    def policyRevisions() {
+        String whiteLabelId = params.id
+        WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
+        if (!whiteLabel) {
+            render status: HttpStatus.NOT_FOUND.value()
+            return
+        }
+        Integer limit = params.int('limit') ?: 20
+        Integer offset = params.int('offset') ?: 0
+        limit = Math.min(limit, 100)
+
+        List<WhiteLabelPolicyRevision> revisions = WhiteLabelPolicyRevision.findAllByWhiteLabel(
+                whiteLabel,
+                [max: limit, offset: offset, sort: 'dateCreated', order: 'desc']
+        )
+        Number total = WhiteLabelPolicyRevision.countByWhiteLabel(whiteLabel)
+
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
+                items: revisions.collect { WhiteLabelPolicyRevision rev ->
+                    [
+                            id           : rev.id,
+                            policyRevision: rev.policyRevision,
+                            updatedBy    : rev.updatedBy,
+                            updatedSource: rev.updatedSource,
+                            effectiveFrom: rev.effectiveFrom,
+                            dateCreated  : rev.dateCreated,
+                            payload      : parsePayload(rev.payload)
+                    ]
+                },
+                count: total,
+                limit: limit,
+                offset: offset
+        ] as JSON)
+    }
+
     def token() {
         String whiteLabelId = params.id
         WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
@@ -179,6 +245,18 @@ class WhiteLabelController {
                 token            : token,
                 expiresInSeconds : jwtService.tokenTtlSeconds
         ] as JSON)
+    }
+
+    private Map parsePayload(String payload) {
+        if (!payload) {
+            return [:]
+        }
+        try {
+            Object parsed = new JsonSlurper().parseText(payload)
+            return parsed instanceof Map ? (Map) parsed : [:]
+        } catch (Exception ignored) {
+            return [:]
+        }
     }
 
     private Map policyAsMap(WhiteLabelPolicy policy) {

@@ -14,6 +14,10 @@ terminated at the gateway and the apps run on HTTP.
 ./scripts/run-traefik.sh
 ```
 
+This script calls `scripts/setup-traefik-certs.sh` to generate local TLS
+artifacts under `traefik/certs/`. These files are **not** versioned; run the
+script on each machine to recreate them.
+
 Add hostnames to `/etc/hosts`:
 
 ```

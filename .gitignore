@@ -25,3 +25,6 @@ tmp/
 *.tmp
 *.swp
 *.swo
+
+# Local TLS proxy certificates (generated locally)
+traefik/certs/

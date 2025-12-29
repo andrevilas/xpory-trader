@@ -2,19 +2,19 @@ package cpservice
 
 import com.sun.net.httpserver.HttpServer
 import grails.core.DefaultGrailsApplication
+import grails.testing.gorm.DataTest
 import spock.lang.Specification
 
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
-class ImbalanceDispatchServiceSpec extends Specification {
+class ImbalanceDispatchServiceSpec extends Specification implements DataTest {
 
     ImbalanceDispatchService service = new ImbalanceDispatchService()
     HttpServer server
 
     void cleanup() {
         server?.stop(0)
-        GroovySystem.metaClassRegistry.removeMetaClass(WhiteLabel)
     }
 
     void 'dispatch posts signal and acknowledges on success'() {
@@ -28,24 +28,21 @@ class ImbalanceDispatchServiceSpec extends Specification {
         service.jwtService = Stub(JwtService) {
             issueToken(_, _) >> 'test-token'
         }
+        WhiteLabel target = new WhiteLabel(name: 'WL B', contactEmail: 'wl-b@example.com', gatewayUrl: "http://localhost:${port}")
+                .save(validate: false, flush: true, failOnError: true)
         ImbalanceSignal signal = new ImbalanceSignal(
-                id: 'sig-1',
                 sourceId: 'wl-a',
-                targetId: 'wl-b',
+                targetId: target.id,
                 action: 'block',
                 effectiveFrom: new Date()
-        )
-        signal.metaClass.save = { Map args -> signal }
+        ).save(validate: false, flush: true, failOnError: true)
         service.imbalanceService = Stub(ImbalanceService) {
-            acknowledge('sig-1', _) >> { String id, String acknowledgedBy ->
+            acknowledge(_, _) >> { String id, String acknowledgedBy ->
                 signal.acknowledged = true
                 signal.acknowledgedBy = acknowledgedBy
                 signal.dispatchStatus = 'acknowledged'
                 signal
             }
-        }
-        WhiteLabel.metaClass.'static'.get = { String id ->
-            new WhiteLabel(id: id, gatewayUrl: "http://localhost:${port}")
         }
 
         when:
@@ -68,24 +65,21 @@ class ImbalanceDispatchServiceSpec extends Specification {
         service.jwtService = Stub(JwtService) {
             issueToken(_, _) >> 'test-token'
         }
+        WhiteLabel target = new WhiteLabel(name: 'WL B', contactEmail: 'wl-b@example.com', gatewayUrl: "http://localhost:${port}")
+                .save(validate: false, flush: true, failOnError: true)
         ImbalanceSignal signal = new ImbalanceSignal(
-                id: 'sig-3',
                 sourceId: 'wl-a',
-                targetId: 'wl-b',
+                targetId: target.id,
                 action: 'block',
                 effectiveFrom: new Date()
-        )
-        signal.metaClass.save = { Map args -> signal }
+        ).save(validate: false, flush: true, failOnError: true)
         service.imbalanceService = Stub(ImbalanceService) {
-            acknowledge('sig-3', _) >> { String id, String acknowledgedBy ->
+            acknowledge(_, _) >> { String id, String acknowledgedBy ->
                 signal.acknowledged = true
                 signal.acknowledgedBy = acknowledgedBy
                 signal.dispatchStatus = 'acknowledged'
                 signal
             }
-        }
-        WhiteLabel.metaClass.'static'.get = { String id ->
-            new WhiteLabel(id: id, gatewayUrl: "http://localhost:${port}")
         }
 
         when:
@@ -106,18 +100,15 @@ class ImbalanceDispatchServiceSpec extends Specification {
         service.jwtService = Stub(JwtService) {
             issueToken(_, _) >> 'test-token'
         }
+        WhiteLabel target = new WhiteLabel(name: 'WL B', contactEmail: 'wl-b@example.com', gatewayUrl: null)
+                .save(validate: false, flush: true, failOnError: true)
         ImbalanceSignal signal = new ImbalanceSignal(
-                id: 'sig-2',
                 sourceId: 'wl-a',
-                targetId: 'wl-b',
+                targetId: target.id,
                 action: 'block',
                 effectiveFrom: new Date()
-        )
-        signal.metaClass.save = { Map args -> signal }
+        ).save(validate: false, flush: true, failOnError: true)
         service.imbalanceService = Stub(ImbalanceService)
-        WhiteLabel.metaClass.'static'.get = { String id ->
-            new WhiteLabel(id: id, gatewayUrl: null)
-        }
 
         when:
         ImbalanceSignal result = service.dispatch(signal)
@@ -138,4 +129,10 @@ class ImbalanceDispatchServiceSpec extends Specification {
         server.start()
         return server.address.port
     }
+
+    @Override
+    Class[] getDomainClassesToMock() {
+        return [ImbalanceSignal, WhiteLabel]
+    }
+
 }

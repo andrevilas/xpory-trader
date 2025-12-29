@@ -12,10 +12,12 @@ class UrlMappings {
         "/wls/$id/policies"(controller: 'whiteLabel') {
             action = [GET: 'policies', PUT: 'updatePolicies']
         }
+        "/wls/$id/policies/revisions"(controller: 'whiteLabel', action: 'policyRevisions', method: 'GET')
         "/wls/$id/trader"(controller: 'traderAccount') {
             action = [GET: 'show', POST: 'upsert', PUT: 'upsert']
         }
         "/wls/$id/token"(controller: 'whiteLabel', action: 'token', method: 'POST')
+        "/relationships"(controller: 'relationship', action: 'index', method: 'GET')
         "/relationships/$src/$dst"(controller: 'relationship') {
             action = [GET: 'show', PUT: 'update']
         }

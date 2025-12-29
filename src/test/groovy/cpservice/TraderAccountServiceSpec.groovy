@@ -1,20 +1,36 @@
 package cpservice
 
-import grails.test.mixin.TestFor
-import grails.test.mixin.domain.DomainClassUnitTestMixin
+import grails.testing.gorm.DataTest
+import grails.testing.services.ServiceUnitTest
 import spock.lang.Specification
 
-@TestFor(TraderAccountService)
-@Mixin(DomainClassUnitTestMixin)
-class TraderAccountServiceSpec extends Specification {
+class TraderAccountServiceSpec extends Specification implements ServiceUnitTest<TraderAccountService>, DataTest {
 
     WhiteLabel whiteLabel
 
+    void setupSpec() {
+        mockDomains(WhiteLabel, TraderAccount, TelemetryEvent)
+    }
+
     void setup() {
-        mockDomain(WhiteLabel)
-        mockDomain(TraderAccount)
-        whiteLabel = new WhiteLabel(id: 'wl-1', name: 'WL1', contactEmail: 'ops@example.com', status: 'active')
-        whiteLabel.save(validate: false)
+        WhiteLabelPolicy policy = new WhiteLabelPolicy(
+                importEnabled: false,
+                exportEnabled: false,
+                exportDelaySeconds: 0,
+                exportDelayDays: 0,
+                visibilityEnabled: false,
+                visibilityWls: [],
+                policyRevision: 'baseline',
+                effectiveFrom: new Date()
+        )
+        whiteLabel = new WhiteLabel(
+                id: 'wl-1',
+                name: 'WL1',
+                contactEmail: 'ops@example.com',
+                status: 'active',
+                baselinePolicy: policy
+        )
+        whiteLabel.save(validate: false, flush: true, failOnError: true)
     }
 
     void 'upsert creates trader account'() {
@@ -41,5 +57,10 @@ class TraderAccountServiceSpec extends Specification {
         then:
         TraderAccount reloaded = TraderAccount.get(trader.id)
         reloaded.confirmedAt
+    }
+
+    @Override
+    Class[] getDomainClassesToMock() {
+        return [WhiteLabel, TraderAccount, TelemetryEvent]
     }
 }

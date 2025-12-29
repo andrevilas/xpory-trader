@@ -1,0 +1,68 @@
+http:
+  routers:
+    cp-jwks-router:
+      rule: "Host(`cp-jwks.localhost`) && Path(`/.well-known/jwks.json`)"
+      entryPoints:
+        - websecure
+      service: cp-service
+      priority: 100
+      tls: {}
+    cp-router:
+      rule: "Host(`cp.localhost`)"
+      entryPoints:
+        - websecure
+      service: cp-service
+      middlewares:
+        - cp-client-header
+      tls:
+        options: cp-mtls
+        certResolver: ""
+    wl-importer-router:
+      rule: "Host(`wl-importer.localhost`)"
+      entryPoints:
+        - websecure
+      service: wl-importer-service
+      tls: {}
+    wl-exporter-router:
+      rule: "Host(`wl-exporter.localhost`)"
+      entryPoints:
+        - websecure
+      service: wl-exporter-service
+      tls: {}
+
+  services:
+    cp-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8080"
+    wl-importer-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8081"
+    wl-exporter-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8090"
+
+  middlewares:
+    cp-client-header:
+      headers:
+        customRequestHeaders:
+          X-Client-Id: "proxy-mtls"
+
+tls:
+  certificates:
+    - certFile: /certs/cp.localhost.crt
+      keyFile: /certs/cp.localhost.key
+    - certFile: /certs/cp-jwks.localhost.crt
+      keyFile: /certs/cp-jwks.localhost.key
+    - certFile: /certs/wl-importer.localhost.crt
+      keyFile: /certs/wl-importer.localhost.key
+    - certFile: /certs/wl-exporter.localhost.crt
+      keyFile: /certs/wl-exporter.localhost.key
+  options:
+    cp-mtls:
+      clientAuth:
+        caFiles:
+          - /certs/ca.crt
+        clientAuthType: RequireAndVerifyClientCert

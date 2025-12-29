@@ -12,6 +12,45 @@ class RelationshipController {
     GovernanceSigningService governanceSigningService
     GovernanceTelemetryService governanceTelemetryService
 
+    def index() {
+        Integer limit = params.int('limit') ?: 100
+        Integer offset = params.int('offset') ?: 0
+        limit = Math.min(limit, 200)
+        String sourceId = params.sourceId ?: params.src
+        String targetId = params.targetId ?: params.dst
+        String status = params.status
+
+        List<Relationship> relationships = Relationship.createCriteria().list(max: limit, offset: offset) {
+            if (sourceId) {
+                eq('sourceId', sourceId)
+            }
+            if (targetId) {
+                eq('targetId', targetId)
+            }
+            if (status) {
+                eq('status', status)
+            }
+            order('lastUpdated', 'desc')
+        }
+
+        Number total = Relationship.createCriteria().count {
+            if (sourceId) {
+                eq('sourceId', sourceId)
+            }
+            if (targetId) {
+                eq('targetId', targetId)
+            }
+            if (status) {
+                eq('status', status)
+            }
+        }
+
+        render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
+                items: relationships.collect { Relationship rel -> toJson(rel) },
+                count: total
+        ] as JSON)
+    }
+
     def show() {
         String src = params.src
         String dst = params.dst

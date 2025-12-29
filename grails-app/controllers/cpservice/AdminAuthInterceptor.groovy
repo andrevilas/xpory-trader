@@ -22,9 +22,11 @@ class AdminAuthInterceptor {
         match(controller: 'whiteLabel', action: 'save')
         match(controller: 'whiteLabel', action: 'show')
         match(controller: 'whiteLabel', action: 'policies')
+        match(controller: 'whiteLabel', action: 'policyRevisions')
         match(controller: 'whiteLabel', action: 'updatePolicies')
         match(controller: 'traderAccount', action: 'show')
         match(controller: 'traderAccount', action: 'upsert')
+        match(controller: 'relationship', action: 'index')
         match(controller: 'relationship', action: 'show')
         match(controller: 'relationship', action: 'update')
         match(controller: 'imbalance', action: 'submit')
@@ -43,6 +45,9 @@ class AdminAuthInterceptor {
 
         X509Certificate clientCert = getClientCert()
         if (!clientCert) {
+            if (isHeaderAuthEnabled() && isHeaderAuthorized()) {
+                return true
+            }
             response.status = HttpStatus.UNAUTHORIZED.value()
             render([error: 'Client certificate required'] as JSON)
             return false
@@ -84,6 +89,29 @@ class AdminAuthInterceptor {
         return cfg?.enabled in [true, 'true', null]
     }
 
+    private boolean isHeaderAuthEnabled() {
+        def cfg = grailsApplication?.config?.security?.admin ?: [:]
+        return cfg?.headerAuthEnabled in [true, 'true']
+    }
+
+    private boolean isHeaderAuthorized() {
+        String headerSubject = request.getHeader('X-SSL-Client-Subject')
+        if (!headerSubject) {
+            headerSubject = request.getHeader('X-Client-Subject')
+        }
+        if (!headerSubject) {
+            headerSubject = request.getHeader('X-Client-Id')
+        }
+        if (!headerSubject) {
+            return false
+        }
+        Set<String> allowedHeaderSubjects = getAllowedHeaderSubjects()
+        if (allowedHeaderSubjects.isEmpty()) {
+            return true
+        }
+        return allowedHeaderSubjects.contains(headerSubject)
+    }
+
     private X509Certificate getClientCert() {
         def certs = request?.getAttribute('javax.servlet.request.X509Certificate')
         if (certs instanceof X509Certificate[] && certs.length > 0) {
@@ -106,6 +134,11 @@ class AdminAuthInterceptor {
                 .collect { normalizeFingerprint(it) }
                 .findAll { it }
                 .toSet()
+    }
+
+    private Set<String> getAllowedHeaderSubjects() {
+        def cfg = grailsApplication?.config?.security?.admin ?: [:]
+        return parseCsvList(cfg?.allowedHeaderSubjects)
     }
 
     private Set<String> parseCsvList(Object raw) {
@@ -132,4 +165,3 @@ class AdminAuthInterceptor {
         return fingerprint.replaceAll(/[^a-fA-F0-9]/, '').toLowerCase()
     }
 }
-

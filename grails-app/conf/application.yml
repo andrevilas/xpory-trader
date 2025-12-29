@@ -152,6 +152,8 @@ security:
         fallbackSeed: xpory-control-plane
     admin:
         enabled: ${ADMIN_AUTH_ENABLED:true}
+        headerAuthEnabled: ${ADMIN_HEADER_AUTH_ENABLED:false}
+        allowedHeaderSubjects: ${ADMIN_HEADER_SUBJECTS:}
         allowedCertSubjects: ${ADMIN_CERT_SUBJECTS:}
         allowedCertFingerprints: ${ADMIN_CERT_FINGERPRINTS:}
     mtls:

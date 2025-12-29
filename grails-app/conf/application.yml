@@ -117,7 +117,9 @@ environments:
     development:
         dataSource:
             dbCreate: none
-            url: ${DEV_DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory_cp}}
+            url: ${DEV_DB_URL:jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE}
+            driverClassName: org.h2.Driver
+            dialect: org.hibernate.dialect.H2Dialect
     test:
         dataSource:
             dbCreate: none
@@ -187,4 +189,4 @@ grails:
     plugin:
         databasemigration:
             updateOnStart: ${DB_MIGRATION_UPDATE_ON_START:true}
-            updateOnStartFileName: changelog.groovy
+            updateOnStartFileName: migrations/changelog.groovy

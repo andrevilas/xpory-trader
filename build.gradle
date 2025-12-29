@@ -26,14 +26,6 @@ repositories {
     maven { url "https://repo.grails.org/grails/core" }
 }
 
-sourceSets {
-    main {
-        resources {
-            srcDir 'grails-app/migrations'
-        }
-    }
-}
-
 dependencies {
     compile "org.springframework.boot:spring-boot-starter-logging"
     compile "org.springframework.boot:spring-boot-autoconfigure"

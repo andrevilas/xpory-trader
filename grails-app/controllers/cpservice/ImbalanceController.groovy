@@ -3,6 +3,8 @@ package cpservice
 import grails.validation.ValidationException
 import grails.converters.JSON
 import org.springframework.http.HttpStatus
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class ImbalanceController {
 
@@ -10,6 +12,7 @@ class ImbalanceController {
 
     ImbalanceService imbalanceService
     ImbalanceDispatchService imbalanceDispatchService
+    private static final Logger INTEGRATION_LOG = LoggerFactory.getLogger('cpservice.integration')
 
     def submit() {
         Map payload = request.JSON as Map ?: [:]
@@ -21,6 +24,8 @@ class ImbalanceController {
         }
         try {
             ImbalanceSignal signal = imbalanceService.record(payload)
+            INTEGRATION_LOG.info('CP imbalance signal recorded id={} sourceId={} targetId={} action={}',
+                    signal.id, signal.sourceId, signal.targetId, signal.action)
             imbalanceDispatchService?.dispatch(signal)
             render status: HttpStatus.ACCEPTED.value(), contentType: "application/json", text: ([
                     id          : signal.id,
@@ -54,6 +59,7 @@ class ImbalanceController {
         String acknowledgedBy = payload.acknowledgedBy ?: request.getHeader('X-Client-Id') ?: 'unknown'
         try {
             ImbalanceSignal signal = imbalanceService.acknowledge(signalId, acknowledgedBy)
+            INTEGRATION_LOG.info('CP imbalance signal acknowledged id={} by={}', signal.id, acknowledgedBy)
             render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
                     id            : signal.id,
                     acknowledged  : signal.acknowledged,

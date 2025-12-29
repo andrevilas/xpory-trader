@@ -4,6 +4,7 @@ import grails.core.GrailsApplication
 import groovy.json.JsonOutput
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
@@ -13,10 +14,12 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.security.KeyStore
 import java.security.SecureRandom
+import java.util.UUID
 
 class ImbalanceDispatchService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ImbalanceDispatchService)
+    private static final Logger INTEGRATION_LOG = LoggerFactory.getLogger('cpservice.integration')
 
     static transactional = false
 
@@ -52,34 +55,55 @@ class ImbalanceDispatchService {
         ]
 
         String endpoint = normalizeUrl(target.gatewayUrl, '/control-plane/imbalance/signals')
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            signal.dispatchAttempts = attempt
-            signal.lastDispatchAt = new Date()
-            try {
-                String token = jwtService.issueToken(target.id, [])
-                int status = postJson(endpoint, payload, token, connectTimeout, readTimeout)
-                if (status >= 200 && status < 300) {
-                    signal.dispatchStatus = 'sent'
-                    if (!signal.dispatchedAt) {
-                        signal.dispatchedAt = new Date()
+        String correlationId = MDC.get('correlationId')
+        boolean injectedCorrelation = false
+        if (!correlationId) {
+            correlationId = UUID.randomUUID().toString()
+            MDC.put('correlationId', correlationId)
+            injectedCorrelation = true
+        }
+        INTEGRATION_LOG.info('CP->WL dispatch start signalId={} sourceId={} targetId={} endpoint={} attempts={}',
+                signal.id, signal.sourceId, signal.targetId, endpoint, maxAttempts)
+        try {
+            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                signal.dispatchAttempts = attempt
+                signal.lastDispatchAt = new Date()
+                try {
+                    String token = jwtService.issueToken(target.id, [])
+                    int status = postJson(endpoint, payload, token, connectTimeout, readTimeout, correlationId)
+                    INTEGRATION_LOG.info('CP->WL dispatch response signalId={} status={} attempt={} endpoint={}',
+                            signal.id, status, attempt, endpoint)
+                    if (status >= 200 && status < 300) {
+                        signal.dispatchStatus = 'sent'
+                        if (!signal.dispatchedAt) {
+                            signal.dispatchedAt = new Date()
+                        }
+                        signal.dispatchError = null
+                        signal.save(flush: true, failOnError: true)
+                        INTEGRATION_LOG.info('CP->WL dispatch acknowledged signalId={} targetId={} attempt={}',
+                                signal.id, signal.targetId, attempt)
+                        return imbalanceService.acknowledge(signal.id, 'dispatch')
                     }
-                    signal.dispatchError = null
-                    signal.save(flush: true, failOnError: true)
-                    return imbalanceService.acknowledge(signal.id, 'dispatch')
+                    signal.dispatchError = "HTTP ${status}"
+                    LOG.warn('Imbalance dispatch attempt {} failed (status={}, signalId={})', attempt, status, signal.id)
+                } catch (Exception ex) {
+                    signal.dispatchError = ex.message?.toString()?.take(500)
+                    LOG.warn('Imbalance dispatch attempt {} failed (signalId={}): {}', attempt, signal.id, ex.message)
                 }
-                signal.dispatchError = "HTTP ${status}"
-                LOG.warn('Imbalance dispatch attempt {} failed (status={}, signalId={})', attempt, status, signal.id)
-            } catch (Exception ex) {
-                signal.dispatchError = ex.message?.toString()?.take(500)
-                LOG.warn('Imbalance dispatch attempt {} failed (signalId={}): {}', attempt, signal.id, ex.message)
+                signal.dispatchStatus = (attempt >= maxAttempts) ? 'failed' : 'pending'
+                signal.save(flush: true, failOnError: true)
+                if (attempt < maxAttempts) {
+                    sleep(backoffMillis * attempt)
+                }
             }
-            signal.dispatchStatus = (attempt >= maxAttempts) ? 'failed' : 'pending'
-            signal.save(flush: true, failOnError: true)
-            if (attempt < maxAttempts) {
-                sleep(backoffMillis * attempt)
+            INTEGRATION_LOG.info('CP->WL dispatch exhausted signalId={} targetId={} attempts={} error={}',
+                    signal.id, signal.targetId, signal.dispatchAttempts, signal.dispatchError)
+            signal
+        } finally {
+            if (injectedCorrelation) {
+                MDC.remove('correlationId')
             }
         }
-        signal
     }
 
     private ImbalanceSignal markFailed(ImbalanceSignal signal, String reason) {
@@ -90,7 +114,7 @@ class ImbalanceDispatchService {
         signal
     }
 
-    private int postJson(String url, Map payload, String token, int connectTimeout, int readTimeout) {
+    private int postJson(String url, Map payload, String token, int connectTimeout, int readTimeout, String correlationId) {
         URL targetUrl = new URL(url)
         HttpURLConnection connection = (HttpURLConnection) targetUrl.openConnection()
         if (connection instanceof javax.net.ssl.HttpsURLConnection) {
@@ -106,6 +130,9 @@ class ImbalanceDispatchService {
         connection.setRequestProperty('Content-Type', 'application/json')
         if (token) {
             connection.setRequestProperty('Authorization', "Bearer ${token}")
+        }
+        if (correlationId) {
+            connection.setRequestProperty('X-Correlation-Id', correlationId)
         }
 
         String json = JsonOutput.toJson(payload)

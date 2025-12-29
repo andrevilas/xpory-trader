@@ -36,3 +36,6 @@ if (Environment.isDevelopmentMode() && targetDir != null) {
     logger("StackTrace", ERROR, ['FULL_STACKTRACE'], false)
 }
 root(ERROR, ['STDOUT'])
+
+// Integration telemetry for CP -> WL dispatch flows
+logger("cpservice.integration", INFO, ['STDOUT'], false)

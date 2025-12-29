@@ -157,6 +157,24 @@
             },
             "url": "{{baseUrl}}/telemetry/events"
           }
+        },
+        {
+          "name": "Submit trade telemetry (TRADER_PURCHASE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"events\": [\n    {\n      \"whiteLabelId\": \"{{whiteLabelId}}\",\n      \"nodeId\": \"edge-01\",\n      \"eventType\": \"TRADER_PURCHASE\",\n      \"eventTimestamp\": \"2025-12-27T13:00:00Z\",\n      \"payload\": {\n        \"role\": \"importer\",\n        \"status\": \"CONFIRMED\",\n        \"tradeId\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"originWhiteLabelId\": \"{{sourceId}}\",\n        \"targetWhiteLabelId\": \"{{targetId}}\",\n        \"requestedQuantity\": 2,\n        \"confirmedQuantity\": 2,\n        \"unitPrice\": 120.00,\n        \"correlationId\": \"6f1d7c7a-8ff2-4d33-9d41-1a0d9cc6bdf4\",\n        \"source\": \"checkout\"\n      }\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/telemetry/events"
+          },
+          "description": "Required fields for trade balance: originWhiteLabelId, targetWhiteLabelId, unitPrice, and requestedQuantity or confirmedQuantity."
         }
       ]
     },

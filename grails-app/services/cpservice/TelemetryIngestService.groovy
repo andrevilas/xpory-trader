@@ -33,6 +33,7 @@ class TelemetryIngestService {
         }
         String nodeId = eventPayload.nodeId ?: 'unknown'
         String eventType = eventPayload.eventType ?: 'unspecified'
+        validateTradePayload(eventType, eventPayload.payload)
         Date eventTimestamp = coerceTimestamp(eventPayload.eventTimestamp)
         String payload = serialisePayload(eventPayload.payload ?: [:])
 
@@ -83,5 +84,31 @@ class TelemetryIngestService {
         Map payload = (eventPayload.payload instanceof Map) ? (Map) eventPayload.payload : [:]
         String status = payload.status?.toString()?.toUpperCase() ?: 'UNKNOWN'
         tradeMetricsService?.recordTradeStatus(status)
+    }
+
+    private void validateTradePayload(String eventType, Object payload) {
+        if (eventType != 'TRADER_PURCHASE') {
+            return
+        }
+        if (!(payload instanceof Map)) {
+            throw new IllegalArgumentException('TRADER_PURCHASE payload must be an object')
+        }
+        Map payloadMap = (Map) payload
+        List<String> missing = []
+        if (!payloadMap.originWhiteLabelId) {
+            missing << 'originWhiteLabelId'
+        }
+        if (!payloadMap.targetWhiteLabelId) {
+            missing << 'targetWhiteLabelId'
+        }
+        if (payloadMap.unitPrice == null) {
+            missing << 'unitPrice'
+        }
+        if (payloadMap.requestedQuantity == null && payloadMap.confirmedQuantity == null) {
+            missing << 'requestedQuantity/confirmedQuantity'
+        }
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("TRADER_PURCHASE payload missing fields: ${missing.join(', ')}")
+        }
     }
 }

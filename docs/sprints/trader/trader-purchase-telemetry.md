@@ -43,3 +43,18 @@ Notes:
   `/reports/trade-balance` aggregation.
 - `executedAt` and `expiresAt` are epoch millis.
 - `confirmedQuantity` is optional when status is `PENDING`/`REJECTED`.
+
+## Trade balance derivation
+
+The Control Plane can only derive bilateral trade balances when the payload
+includes both WL identifiers and value fields. Minimum required fields for
+aggregation:
+
+- `originWhiteLabelId`
+- `targetWhiteLabelId`
+- `unitPrice`
+- `requestedQuantity` or `confirmedQuantity`
+
+If any of these are missing in emitted events, the telemetry can still be
+stored, but the trade-balance report cannot compute accurate values for that
+WL pair.

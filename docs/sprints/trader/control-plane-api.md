@@ -15,7 +15,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/policies/pull` | `POST` | Bulk export baseline policy data for Policy Agents (supports filtering by ID and `since`). |
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
 | `/imbalance/signals/{id}/ack` | `POST` | Confirm asynchronous receipt of a signal by the WL, capturing ack metadata. |
-| `/telemetry/events` | `POST` | Existing ingestion endpoint for event/ledger telemetry. |
+| `/telemetry/events` | `GET`, `POST` | Query or ingest telemetry events. |
 | `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting. |
 | `/.well-known/jwks.json` | `GET` | Public JWK set used to validate CP-issued JWTs. |
 
@@ -90,6 +90,13 @@ Tokens are RS256 and validated via `/.well-known/jwks.json` (`kid` required).
 Canonical schema for cross-WL trade telemetry is defined in
 `docs/sprints/trader/trader-purchase-telemetry.md`.
 
+Trade-balance visibility depends on the telemetry payload content. The Control
+Plane can only compute bilateral balances when events include both WL parties
+(`originWhiteLabelId` + `targetWhiteLabelId`) and trade values (ex:
+`confirmedQuantity`/`requestedQuantity` with `unitPrice`). If those fields are
+missing from the event payloads, the CP will still store the telemetry but
+cannot derive a bilateral balance between two WLs.
+
 ## WhiteLabel fields
 
 The WL registry includes `gatewayUrl` (base URL for CP → WL dispatches such as
@@ -140,6 +147,10 @@ should verify signatures using the shared secret and cache the payload locally.
 `/reports/trade-balance` now enriches relationships with `tradeMetrics`
 aggregated from `TRADER_PURCHASE` telemetry and includes
 `totals.tradeStatusTotals` (CONFIRMED/PENDING/REJECTED/UNKNOWN).
+
+The report relies on `originWhiteLabelId`, `targetWhiteLabelId`, and value
+fields from the telemetry payload. If WL nodes emit partial payloads, the
+aggregate may be incomplete or zero for those WL pairs.
 
 **Secrets**
 

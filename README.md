@@ -8,6 +8,7 @@ Control-plane service built with Grails 3.3 that anchors policy authority, ident
 - **Policy retrieval** – `GET /wls/{id}/policies` returns the persisted baseline configuration with p95 latency instrumentation.
 - **Token issuance** – `POST /wls/{id}/token` produces 5-minute JWTs with WL-scoped claims for downstream use.
 - **Telemetry intake** – `POST /telemetry/events` accepts WL node events and appends them to the Postgres-backed `cp_telemetry` log.
+- **Telemetry query** – `GET /telemetry/events` lists persisted telemetry with filters, pagination, and ordering.
 - **Security posture** – mTLS-ready server configuration, JWT key rotation hooks, request correlation IDs, and OpenTelemetry spans for core flows.
 
 ## Getting started
@@ -113,6 +114,35 @@ Accepts either a single event object or `{ "events": [...] }` batch.
 ```
 
 Response `202 Accepted` summarises persisted event ids.
+
+### `GET /telemetry/events`
+Query telemetry events with filters and pagination.
+
+Query params:
+- `whiteLabelId`, `eventType`, `nodeId`
+- `from`, `to` (ISO-8601 with timezone)
+- `limit` (default 50, max 200), `offset` (default 0)
+
+Response:
+```json
+{
+  "items": [
+    {
+      "id": "...",
+      "whiteLabelId": "wl-x",
+      "nodeId": "wl-x",
+      "eventType": "TRADER_PURCHASE",
+      "eventTimestamp": "2025-12-27T13:00:00Z",
+      "payload": { "value": 123 },
+      "dateCreated": "...",
+      "lastUpdated": "..."
+    }
+  ],
+  "count": 123,
+  "limit": 50,
+  "offset": 0
+}
+```
 
 ## Observability
 

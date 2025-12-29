@@ -24,7 +24,9 @@ class UrlMappings {
         "/policies/pull"(controller: 'policyAgent', action: 'pull', method: 'POST')
         "/imbalance/signals"(controller: 'imbalance', action: 'submit', method: 'POST')
         "/imbalance/signals/$id/ack"(controller: 'imbalance', action: 'ack', method: 'POST')
-        "/telemetry/events"(controller: 'telemetry', action: 'events', method: 'POST')
+        "/telemetry/events"(controller: 'telemetry') {
+            action = [GET: 'list', POST: 'events']
+        }
         "/reports/trade-balance"(controller: 'reports', action: 'tradeBalance', method: 'GET')
         "/.well-known/jwks.json"(controller: 'jwks', action: 'index', method: 'GET')
         "/wls/$id/keys/rotate"(controller: 'key', action: 'rotate', method: 'POST')

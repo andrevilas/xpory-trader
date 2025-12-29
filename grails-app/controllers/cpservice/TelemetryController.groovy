@@ -1,5 +1,6 @@
 package cpservice
 
+import grails.converters.JSON
 import org.springframework.http.HttpStatus
 
 class TelemetryController {
@@ -7,6 +8,7 @@ class TelemetryController {
     static responseFormats = ['json']
 
     TelemetryIngestService telemetryIngestService
+    TelemetryQueryService telemetryQueryService
 
     def events() {
         def payload = request.JSON
@@ -33,6 +35,46 @@ class TelemetryController {
             render(status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json') {
                 [error: ex.message]
             }
+        }
+    }
+
+    def list() {
+        try {
+            Map result = telemetryQueryService.list(params)
+            render(status: HttpStatus.OK.value(), contentType: 'application/json') {
+                [
+                        items : result.items.collect { TelemetryEvent event ->
+                            [
+                                    id            : event.id,
+                                    whiteLabelId  : event.whiteLabelId,
+                                    nodeId        : event.nodeId,
+                                    eventType     : event.eventType,
+                                    eventTimestamp: event.eventTimestamp,
+                                    payload       : parsePayload(event.payload),
+                                    dateCreated   : event.dateCreated,
+                                    lastUpdated   : event.lastUpdated
+                            ]
+                        },
+                        count : result.count,
+                        limit : result.limit,
+                        offset: result.offset
+                ]
+            }
+        } catch (IllegalArgumentException ex) {
+            render(status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json') {
+                [error: ex.message]
+            }
+        }
+    }
+
+    private static Object parsePayload(String raw) {
+        if (!raw) {
+            return null
+        }
+        try {
+            return JSON.parse(raw)
+        } catch (Exception ignored) {
+            return raw
         }
     }
 }

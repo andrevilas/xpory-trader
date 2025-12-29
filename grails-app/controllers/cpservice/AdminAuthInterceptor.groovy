@@ -31,6 +31,7 @@ class AdminAuthInterceptor {
         match(controller: 'relationship', action: 'update')
         match(controller: 'imbalance', action: 'submit')
         match(controller: 'imbalance', action: 'ack')
+        match(controller: 'telemetry', action: 'list')
         match(controller: 'key', action: 'rotate')
         match(controller: 'reports', action: 'tradeBalance')
     }

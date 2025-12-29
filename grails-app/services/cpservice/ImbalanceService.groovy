@@ -16,12 +16,16 @@ class ImbalanceService {
         if (!payload.action) {
             throw new IllegalArgumentException('action is required')
         }
+        String action = payload.action.toString().toLowerCase()
+        if (!(action in ['block', 'unblock'])) {
+            throw new IllegalArgumentException('action must be block or unblock')
+        }
         String updatedBy = payload.updatedBy ?: payload.updated_by ?: payload.initiatedBy
         String updatedSource = payload.updatedSource ?: payload.updated_source ?: payload.source
         ImbalanceSignal signal = new ImbalanceSignal(
                 sourceId      : sourceId,
                 targetId      : targetId,
-                action        : payload.action.toString().toLowerCase(),
+                action        : action,
                 reason        : payload.reason?.toString(),
                 initiatedBy   : payload.initiatedBy?.toString(),
                 updatedBy     : updatedBy?.toString(),

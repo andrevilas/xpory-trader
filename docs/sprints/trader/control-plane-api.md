@@ -13,6 +13,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/wls/{id}/trader` | `GET`, `POST` | Inspect or authorise the Trader Account metadata for a WL; propagated to nodes via policy packages. |
 | `/wls/{id}/trader/sync` | `POST` | Pull Trader Account data from the WL node (`/api/v2/control-plane/trader-account`) and upsert it in the CP. |
 | `/relationships/{src}/{dst}` | `GET`, `PUT` | Inspect or upsert the bilateral configuration (FX, limits, status) between two tenants. |
+| `/wls/{id}/relationships` | `GET` | List relationships where the WL is the target (use `?signed=true` to include per-item signatures). |
 | `/policies/pull` | `POST` | Bulk export baseline policy data for Policy Agents (supports filtering by ID and `since`). |
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
 | `/imbalance/signals/{id}/ack` | `POST` | Confirm asynchronous receipt of a signal by the WL, capturing ack metadata. |

@@ -17,8 +17,9 @@ class RelationshipController {
         Integer offset = params.int('offset') ?: 0
         limit = Math.min(limit, 200)
         String sourceId = params.sourceId ?: params.src
-        String targetId = params.targetId ?: params.dst
+        String targetId = params.targetId ?: params.dst ?: params.id ?: params.wlId
         String status = params.status
+        boolean includeSignature = params.boolean('signed') || params.boolean('includeSignature')
 
         List<Relationship> relationships = Relationship.createCriteria().list(max: limit, offset: offset) {
             if (sourceId) {
@@ -46,7 +47,13 @@ class RelationshipController {
         }
 
         render status: HttpStatus.OK.value(), contentType: "application/json", text: ([
-                items: relationships.collect { Relationship rel -> toJson(rel) },
+                items: relationships.collect { Relationship rel ->
+                    Map payload = toJson(rel)
+                    if (includeSignature) {
+                        payload.signature = governanceSigningService.signPayload(payload)
+                    }
+                    payload
+                },
                 count: total
         ] as JSON)
     }

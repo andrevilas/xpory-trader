@@ -12,6 +12,7 @@ class WhiteLabelController {
 
     WhiteLabelRegistrationService whiteLabelRegistrationService
     WhiteLabelPolicyService whiteLabelPolicyService
+    WhiteLabelIdentityService whiteLabelIdentityService
     PolicyMetricsService policyMetricsService
     JwtService jwtService
     GrailsApplication grailsApplication
@@ -118,6 +119,21 @@ class WhiteLabelController {
         }
 
         Map payload = request.JSON as Map ?: [:]
+        if (payload.containsKey('id')) {
+            String requestedId = payload.id?.toString()?.trim()
+            if (!requestedId) {
+                render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: 'id is required'] as JSON)
+                return
+            }
+            if (requestedId != whiteLabel.id) {
+                try {
+                    whiteLabel = whiteLabelIdentityService.renameWhiteLabelId(whiteLabel.id, requestedId)
+                } catch (IllegalArgumentException ex) {
+                    render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
+                    return
+                }
+            }
+        }
         if (payload.name != null) {
             whiteLabel.name = payload.name
         }

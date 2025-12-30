@@ -99,11 +99,13 @@ cannot derive a bilateral balance between two WLs.
 
 ## WhiteLabel fields
 
-The WL registry includes `gatewayUrl` (base URL for CP → WL dispatches such as
-imbalance signals). Example:
+The WL registry accepts a stable `id` (string) used by WL nodes to authenticate
+and interact with the Control Plane. The `gatewayUrl` (base URL for CP → WL
+dispatches such as imbalance signals) remains optional.
 
 ```json
 {
+  "id": "wl-a",
   "gatewayUrl": "https://wl-a.xpory.app"
 }
 ```

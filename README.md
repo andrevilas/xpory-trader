@@ -53,6 +53,7 @@ Registers a new WL and seeds the default policy.
 
 ```json
 {
+  "id": "wl-acme",
   "name": "Acme WL",
   "description": "Pilot tenant",
   "contactEmail": "ops@acme.tld",
@@ -79,10 +80,11 @@ Response `201 Created`:
 ```
 
 ### `PUT /wls/{id}`
-Updates WL metadata (name, description, contactEmail, gatewayUrl, status).
+Updates WL metadata (id, name, description, contactEmail, gatewayUrl, status).
 
 ```json
 {
+  "id": "wl-acme",
   "gatewayUrl": "https://wl-importer.localhost"
 }
 ```

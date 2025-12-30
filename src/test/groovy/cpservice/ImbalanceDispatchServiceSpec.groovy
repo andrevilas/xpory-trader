@@ -120,7 +120,7 @@ class ImbalanceDispatchServiceSpec extends Specification implements DataTest {
 
     private int startServer(AtomicReference<String> authHeader) {
         server = HttpServer.create(new InetSocketAddress(0), 0)
-        server.createContext('/control-plane/imbalance/signals') { exchange ->
+        server.createContext('/api/v2/control-plane/imbalance/signals') { exchange ->
             authHeader.set(exchange.requestHeaders.getFirst('Authorization'))
             exchange.sendResponseHeaders(202, 0)
             exchange.responseBody.close()

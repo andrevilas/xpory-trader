@@ -54,7 +54,7 @@ class ImbalanceDispatchService {
                 effectiveUntil: formatDate(signal.effectiveUntil)
         ]
 
-        String endpoint = normalizeUrl(target.gatewayUrl, '/control-plane/imbalance/signals')
+        String endpoint = normalizeUrl(target.gatewayUrl, '/api/v2/control-plane/imbalance/signals')
         String correlationId = MDC.get('correlationId')
         boolean injectedCorrelation = false
         if (!correlationId) {

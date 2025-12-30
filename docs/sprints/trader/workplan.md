@@ -42,7 +42,7 @@ Legenda de status:
 
 ### Fase B — Imbalance signals (CP → WL)
 - [x] Adicionar no cadastro de WL um campo de endpoint base (ex.: `gatewayUrl`) para dispatch.
-- [x] Implementar dispatcher de sinais para WL (`/control-plane/imbalance/signals`):
+- [x] Implementar dispatcher de sinais para WL (`/api/v2/control-plane/imbalance/signals`):
   - envio mTLS, retries com backoff, e storage de status (pendente/enviado/ack).
 - [x] Implementar confirmação automática via `/imbalance/signals/{id}/ack` quando WL responde com sucesso.
 - [ ] Testes de integração para dispatch/ack.

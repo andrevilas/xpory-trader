@@ -28,7 +28,7 @@ class TraderAccountSyncService {
             return [status: HttpStatus.BAD_REQUEST.value(), body: [ok: false, error: 'Missing gatewayUrl']]
         }
 
-        String endpoint = normalizeUrl(whiteLabel.gatewayUrl, '/control-plane/trader-account')
+        String endpoint = normalizeUrl(whiteLabel.gatewayUrl, '/api/v2/control-plane/trader-account')
         boolean injectedCorrelation = false
         if (!correlationId) {
             correlationId = UUID.randomUUID().toString()

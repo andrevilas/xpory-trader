@@ -11,7 +11,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/wls/{id}/token` | `POST` | Mint a scoped JWT for the tenant. |
 | `/wls/{id}/keys/rotate` | `POST` | Rotate the tenant-specific JWT signing key (new `kid`). |
 | `/wls/{id}/trader` | `GET`, `POST` | Inspect or authorise the Trader Account metadata for a WL; propagated to nodes via policy packages. |
-| `/wls/{id}/trader/sync` | `POST` | Pull Trader Account data from the WL node (`/control-plane/trader-account`) and upsert it in the CP. |
+| `/wls/{id}/trader/sync` | `POST` | Pull Trader Account data from the WL node (`/api/v2/control-plane/trader-account`) and upsert it in the CP. |
 | `/relationships/{src}/{dst}` | `GET`, `PUT` | Inspect or upsert the bilateral configuration (FX, limits, status) between two tenants. |
 | `/policies/pull` | `POST` | Bulk export baseline policy data for Policy Agents (supports filtering by ID and `since`). |
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
@@ -45,7 +45,7 @@ Ensure `gatewayUrl` points to the WL public HTTPS host and that
 ## CP → WL dispatch contract (imbalance signals)
 Control Plane dispatches imbalance signals to the WL gateway:
 
-- `POST /control-plane/imbalance/signals`
+- `POST /api/v2/control-plane/imbalance/signals`
 - `Authorization: Bearer <jwt>` (RS256, `aud` + `wlId` must match the target WL id)
 - `Content-Type: application/json`
 
@@ -79,7 +79,7 @@ When a WL is re-registered in the CP and its local Trader Account still exists,
 operators can trigger a recovery sync:
 
 - `POST /wls/{id}/trader/sync` (CP admin auth)
-- The CP calls `GET {gatewayUrl}/control-plane/trader-account` with a short-lived
+- The CP calls `GET {gatewayUrl}/api/v2/control-plane/trader-account` with a short-lived
   JWT issued by `/wls/{id}/token`.
 - The WL returns `{ id, name, status, contactEmail, contactPhone, whiteLabelId }`.
 

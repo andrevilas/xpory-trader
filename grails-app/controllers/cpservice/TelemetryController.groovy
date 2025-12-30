@@ -41,25 +41,24 @@ class TelemetryController {
     def list() {
         try {
             Map result = telemetryQueryService.list(params)
-            render(status: HttpStatus.OK.value(), contentType: 'application/json') {
-                [
-                        items : result.items.collect { TelemetryEvent event ->
-                            [
-                                    id            : event.id,
-                                    whiteLabelId  : event.whiteLabelId,
-                                    nodeId        : event.nodeId,
-                                    eventType     : event.eventType,
-                                    eventTimestamp: event.eventTimestamp,
-                                    payload       : parsePayload(event.payload),
-                                    dateCreated   : event.dateCreated,
-                                    lastUpdated   : event.lastUpdated
-                            ]
-                        },
-                        count : result.count,
-                        limit : result.limit,
-                        offset: result.offset
-                ]
-            }
+            Map response = [
+                    items : result.items.collect { TelemetryEvent event ->
+                        [
+                                id            : event.id,
+                                whiteLabelId  : event.whiteLabelId,
+                                nodeId        : event.nodeId,
+                                eventType     : event.eventType,
+                                eventTimestamp: event.eventTimestamp,
+                                payload       : parsePayload(event.payload),
+                                dateCreated   : event.dateCreated,
+                                lastUpdated   : event.lastUpdated
+                        ]
+                    },
+                    count : result.count,
+                    limit : result.limit,
+                    offset: result.offset
+            ]
+            render status: HttpStatus.OK.value(), contentType: 'application/json', text: (response as JSON)
         } catch (IllegalArgumentException ex) {
             render(status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json') {
                 [error: ex.message]

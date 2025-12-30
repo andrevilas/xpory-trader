@@ -18,6 +18,7 @@ class TelemetryEvent {
     Date eventTimestamp
 
     Date dateCreated
+    Date lastUpdated
 
     static mapping = {
         table 'cp_telemetry'

@@ -26,6 +26,7 @@ class AdminAuthInterceptor {
         match(controller: 'whiteLabel', action: 'updatePolicies')
         match(controller: 'traderAccount', action: 'show')
         match(controller: 'traderAccount', action: 'upsert')
+        match(controller: 'traderAccount', action: 'sync')
         match(controller: 'relationship', action: 'index')
         match(controller: 'relationship', action: 'show')
         match(controller: 'relationship', action: 'update')

@@ -11,6 +11,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/wls/{id}/token` | `POST` | Mint a scoped JWT for the tenant. |
 | `/wls/{id}/keys/rotate` | `POST` | Rotate the tenant-specific JWT signing key (new `kid`). |
 | `/wls/{id}/trader` | `GET`, `POST` | Inspect or authorise the Trader Account metadata for a WL; propagated to nodes via policy packages. |
+| `/wls/{id}/trader/sync` | `POST` | Pull Trader Account data from the WL node (`/control-plane/trader-account`) and upsert it in the CP. |
 | `/relationships/{src}/{dst}` | `GET`, `PUT` | Inspect or upsert the bilateral configuration (FX, limits, status) between two tenants. |
 | `/policies/pull` | `POST` | Bulk export baseline policy data for Policy Agents (supports filtering by ID and `since`). |
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
@@ -72,6 +73,15 @@ Policy responses (`GET /wls/{id}/policies` and `POST /policies/pull`) now embed 
 `traderAccount` object whenever the Control Plane has issued Trader metadata for
 the tenant. WL Nodes should persist the Trader locally (idempotently) and reply
 with `trader.account.confirmed` telemetry once the record is stored.
+
+## CP → WL trader sync (manual recovery)
+When a WL is re-registered in the CP and its local Trader Account still exists,
+operators can trigger a recovery sync:
+
+- `POST /wls/{id}/trader/sync` (CP admin auth)
+- The CP calls `GET {gatewayUrl}/control-plane/trader-account` with a short-lived
+  JWT issued by `/wls/{id}/token`.
+- The WL returns `{ id, name, status, contactEmail, contactPhone, whiteLabelId }`.
 
 ## JWT Scopes Contract
 

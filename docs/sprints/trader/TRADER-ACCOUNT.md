@@ -15,6 +15,16 @@ Agent job introduced in this change set.
 5. When a Trader is created/updated and remains `active`, the node emits a
    `trader.account.confirmed` telemetry event back to the CP.
 
+## Recovery Sync
+
+If a WL is removed from the CP but still has a local Trader Account, an admin
+can re-register the WL and trigger a manual sync:
+
+1. Call `POST /wls/{id}/trader/sync` on the CP.
+2. The CP fetches `GET {gatewayUrl}/control-plane/trader-account` from the WL.
+3. The CP upserts the Trader Account using the `id` returned by the WL to keep
+   `cpTraderId` stable.
+
 The local table only stores metadata required for cross-WL trading. All contact
 fields are hashed + masked to avoid persisting raw values.
 

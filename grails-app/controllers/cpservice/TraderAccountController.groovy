@@ -8,6 +8,7 @@ class TraderAccountController {
     static responseFormats = ['json']
 
     TraderAccountService traderAccountService
+    TraderAccountSyncService traderAccountSyncService
 
     def show() {
         String whiteLabelId = params.id
@@ -38,5 +39,13 @@ class TraderAccountController {
         } catch (IllegalArgumentException ex) {
             render status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json', text: ([error: ex.message] as JSON)
         }
+    }
+
+    def sync() {
+        String whiteLabelId = params.id
+        String admin = request.getHeader('X-Admin-Id') ?: request.getHeader('X-Client-Id')
+        String correlationId = request.getHeader('X-Correlation-Id') ?: request.getHeader('X-Request-Id')
+        Map result = traderAccountSyncService.syncFromWhiteLabel(whiteLabelId, admin?.toString(), correlationId)
+        render status: (result.status as int), contentType: 'application/json', text: (result.body as JSON)
     }
 }

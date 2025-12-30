@@ -13,10 +13,23 @@ class TraderAccountService {
         if (!whiteLabel) {
             throw new IllegalArgumentException('whiteLabel is required')
         }
-        TraderAccount trader = TraderAccount.findByWhiteLabel(whiteLabel)
+        String desiredId = payload.id?.toString()?.trim()
+        TraderAccount trader = null
+        if (desiredId) {
+            trader = TraderAccount.get(desiredId)
+            if (trader && trader.whiteLabel?.id != whiteLabel.id) {
+                throw new IllegalArgumentException('Trader id already belongs to another WL')
+            }
+        }
+        if (!trader) {
+            trader = TraderAccount.findByWhiteLabel(whiteLabel)
+        }
         boolean isNew = !trader
         if (!trader) {
             trader = new TraderAccount(whiteLabel: whiteLabel)
+            if (desiredId) {
+                trader.id = desiredId
+            }
         }
 
         String name = payload.name?.toString()?.trim()

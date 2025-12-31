@@ -16,6 +16,10 @@ class GovernanceTelemetryService {
         recordEvent(sourceWhiteLabelId, 'RELATIONSHIP_PACKAGE_SENT', payload)
     }
 
+    TelemetryEvent recordPeerTokenIssued(String importerId, Map details = [:]) {
+        recordEvent(importerId, 'PEER_TOKEN_ISSUED', details)
+    }
+
     private TelemetryEvent recordEvent(String whiteLabelId, String eventType, Map details) {
         if (!whiteLabelId) {
             return null

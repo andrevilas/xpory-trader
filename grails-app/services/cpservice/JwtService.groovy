@@ -27,11 +27,13 @@ class JwtService {
     JwtKeyService jwtKeyService
 
     int tokenTtlSeconds = 300
+    int peerTokenTtlSeconds = 300
     private SigningKeyResolverAdapter signingKeyResolver
 
     @PostConstruct
     void init() {
         tokenTtlSeconds = (grailsApplication.config.security.jwt.ttlSeconds ?: 300) as int
+        peerTokenTtlSeconds = (grailsApplication.config.security.jwt.peerTokenTtlSeconds ?: tokenTtlSeconds ?: 300) as int
         signingKeyResolver = new WhiteLabelSigningKeyResolver(jwtKeyService)
     }
 
@@ -53,6 +55,32 @@ class JwtService {
                 .setAudience(whiteLabelId)
                 .claim('scopes', (scopes ?: ['policies:read']).unique())
                 .claim('wlId', whiteLabelId)
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(expiry))
+                .setHeaderParam('kid', keyEntry.keyId)
+                .signWith(SignatureAlgorithm.RS256, signingKey)
+                .compact()
+    }
+
+    String issuePeerToken(String importerId, String targetWlId, Collection<String> scopes) {
+        if (!importerId || !targetWlId) {
+            throw new IllegalArgumentException('importerId and targetWlId are required')
+        }
+
+        WhiteLabelSigningKey keyEntry = jwtKeyService.ensureActiveKey(importerId)
+        PrivateKey signingKey = (PrivateKey) jwtKeyService.toPrivateKey(keyEntry)
+
+        Instant now = Instant.now()
+        Instant expiry = now.plusSeconds(Math.min(peerTokenTtlSeconds, 300))
+
+        return Jwts.builder()
+                .setId(UUID.randomUUID().toString())
+                .setIssuer(grailsApplication.config.security.jwt.issuer ?: 'xpory-control-plane')
+                .setSubject(targetWlId)
+                .setAudience(targetWlId)
+                .claim('scopes', (scopes ?: []).unique())
+                .claim('wlId', importerId)
+                .claim('targetWlId', targetWlId)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))
                 .setHeaderParam('kid', keyEntry.keyId)

@@ -17,6 +17,7 @@ class UrlMappings {
             action = [GET: 'show', POST: 'upsert', PUT: 'upsert']
         }
         "/wls/$id/trader/sync"(controller: 'traderAccount', action: 'sync', method: 'POST')
+        "/wls/$id/peer-token"(controller: 'whiteLabel', action: 'peerToken', method: 'POST')
         "/wls/$id/token"(controller: 'whiteLabel', action: 'token', method: 'POST')
         "/relationships"(controller: 'relationship', action: 'index', method: 'GET')
         "/wls/$id/relationships"(controller: 'relationship', action: 'index', method: 'GET')

@@ -19,6 +19,7 @@ class WhiteLabelController {
     TraderAccountService traderAccountService
     GovernanceSigningService governanceSigningService
     GovernanceTelemetryService governanceTelemetryService
+    PeerTokenService peerTokenService
 
     def index() {
         Integer limit = params.int('limit') ?: 100
@@ -245,6 +246,21 @@ class WhiteLabelController {
                 limit: limit,
                 offset: offset
         ] as JSON)
+    }
+
+    def peerToken() {
+        String importerId = params.id
+        Map payload = request.JSON as Map ?: [:]
+        String targetWlId = (payload.targetWlId ?: payload.target_wl_id)?.toString()
+        List<String> scopes = (payload.scopes ?: []) as List<String>
+        try {
+            Map result = peerTokenService.issuePeerToken(importerId, targetWlId, scopes)
+            render status: HttpStatus.CREATED.value(), contentType: "application/json", text: (result as JSON)
+        } catch (IllegalArgumentException ex) {
+            render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
+        } catch (IllegalStateException ex) {
+            render status: HttpStatus.FORBIDDEN.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
+        }
     }
 
     def token() {

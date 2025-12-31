@@ -9,6 +9,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/wls/{id}` | `GET`, `PUT` | Fetch or update metadata for a specific white-label (ex: `gatewayUrl`). |
 | `/wls/{id}/policies` | `GET`, `PUT` | Read or update the baseline policy package attached to the tenant. |
 | `/wls/{id}/token` | `POST` | Mint a scoped JWT for the tenant. |
+| `/wls/{id}/peer-token` | `POST` | Mint a short-lived peer token for WL-to-WL auth (scopes: `offers:sync`, `trader:purchase`). |
 | `/wls/{id}/keys/rotate` | `POST` | Rotate the tenant-specific JWT signing key (new `kid`). |
 | `/wls/{id}/trader` | `GET`, `POST` | Inspect or authorise the Trader Account metadata for a WL; propagated to nodes via policy packages. |
 | `/wls/{id}/trader/sync` | `POST` | Pull Trader Account data from the WL node (`/api/v2/control-plane/trader-account`) and upsert it in the CP. |

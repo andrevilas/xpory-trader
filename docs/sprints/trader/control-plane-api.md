@@ -19,7 +19,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
 | `/imbalance/signals/{id}/ack` | `POST` | Confirm asynchronous receipt of a signal by the WL, capturing ack metadata. |
 | `/telemetry/events` | `GET`, `POST` | Query or ingest telemetry events. |
-| `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting. |
+| `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting (filters: `from`, `to`, `wlId`, `wlImporter`, `wlExporter`). |
 | `/.well-known/jwks.json` | `GET` | Public JWK set used to validate CP-issued JWTs. |
 
 See `docs/postman/control-plane.postman_collection.json` for sample
@@ -161,6 +161,15 @@ should verify signatures using the shared secret and cache the payload locally.
 `/reports/trade-balance` now enriches relationships with `tradeMetrics`
 aggregated from `TRADER_PURCHASE` telemetry and includes
 `totals.tradeStatusTotals` (CONFIRMED/PENDING/REJECTED/UNKNOWN).
+
+Optional filters:
+- `from` / `to` (ISO-8601 timestamps)
+- `wlId` (either side of the pair)
+- `wlImporter` (target WL)
+- `wlExporter` (source WL)
+
+When `eventName=TRADE_SETTLED` or `settlementStatus=SETTLED`, the report also
+exposes `tradeMetrics.settled` totals per pair.
 
 The report relies on `originWhiteLabelId`, `targetWhiteLabelId`, and value
 fields from the telemetry payload. If WL nodes emit partial payloads, the

@@ -30,6 +30,7 @@ class TradeApproval {
 
     static mapping = {
         table 'cp_trade_approvals'
+        version false
         id generator: 'uuid2', type: 'string', length: 36
         tradeId column: 'trade_id'
         externalTradeId column: 'external_trade_id'

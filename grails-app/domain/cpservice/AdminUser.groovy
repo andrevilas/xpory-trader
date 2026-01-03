@@ -23,6 +23,7 @@ class AdminUser {
 
     static mapping = {
         table 'cp_users'
+        version false
         id generator: 'uuid2', type: 'string', length: 36
         passwordHash column: 'password_hash'
         lastLoginAt column: 'last_login_at'

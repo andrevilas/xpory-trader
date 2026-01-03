@@ -59,6 +59,8 @@ Notes:
 - `settlementStatus` captures the latest settlement outcome for the trade.
 - Timeouts are emitted as `eventName=TRADE_TIMEOUT`, while `status` remains
   `REJECTED` with `failureReason=PENDING_TIMEOUT`.
+- Common `failureReason` values: `OUT_OF_STOCK`, `OFFER_INACTIVE`,
+  `PRICE_CHANGED`, `PENDING_TIMEOUT`.
 
 ## Trade balance derivation
 

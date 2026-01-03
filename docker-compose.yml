@@ -24,8 +24,30 @@ services:
       DB_NAME: ${DB_NAME:-xpory_cp}
       DB_USERNAME: ${DB_USERNAME:-xpory_cp}
       DB_PASSWORD: ${DB_PASSWORD:-supersecret}
-      SERVER_SSL_ENABLED: "false"
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: /tls/server/server.p12
+      SERVER_SSL_KEY_STORE_PASSWORD: ${SERVER_SSL_KEY_STORE_PASSWORD:-changeit}
+      SERVER_SSL_TRUST_STORE: /tls/ca/ca-truststore.p12
+      SERVER_SSL_TRUST_STORE_PASSWORD: ${SERVER_SSL_TRUST_STORE_PASSWORD:-changeit}
+      SERVER_SSL_CLIENT_AUTH: need
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-}
+      ADMIN_HEADER_AUTH_ENABLED: "true"
+      ADMIN_HEADER_SUBJECTS: proxy-mtls
+      APP_CP_GOVERNANCE_SIGNING_SECRET: ${APP_CP_GOVERNANCE_SIGNING_SECRET:-test-governance-signing-secret}
     ports:
       - "8080:8080"
+    volumes:
+      - ./tls:/tls:ro
+    restart: unless-stopped
+
+  admin-ui:
+    build:
+      context: ../../xpory-trader-admin-ui
+      args:
+        VITE_BASE_PATH: /admin/
+        VITE_CP_BASE_URL: /admin/api
+    ports:
+      - "8082:80"
+    volumes:
+      - ./nginx/admin-ui.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped

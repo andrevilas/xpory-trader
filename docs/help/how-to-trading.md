@@ -5,6 +5,8 @@ Guia prático para gerenciar o comércio entre White Labels (WLs) no Control Pla
 Este documento descreve, passo a passo, como configurar e operar o comércio
 (offers, políticas, relacionamentos e importação/exportação) entre WLs.
 
+Estado atual consolidado da sprint trader: `docs/sprints/trader/state-of-sprint.md`.
+
 ---
 
 ## Conceitos-chave (resumo rápido)

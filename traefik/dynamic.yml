@@ -1,5 +1,22 @@
 http:
   routers:
+    admin-api-router:
+      rule: "Host(`cp.localhost`) && PathPrefix(`/admin/api`)"
+      entryPoints:
+        - websecure
+      service: cp-service
+      middlewares:
+        - cp-client-header
+        - admin-api-strip
+      priority: 200
+      tls: {}
+    admin-ui-router:
+      rule: "Host(`cp.localhost`) && PathPrefix(`/admin`)"
+      entryPoints:
+        - websecure
+      service: admin-ui-service
+      priority: 100
+      tls: {}
     cp-jwks-router:
       rule: "Host(`cp-jwks.localhost`) && Path(`/.well-known/jwks.json`)"
       entryPoints:
@@ -14,9 +31,7 @@ http:
       service: cp-service
       middlewares:
         - cp-client-header
-      tls:
-        options: cp-mtls
-        certResolver: ""
+      tls: {}
     wl-importer-router:
       rule: "Host(`wl-importer.localhost`)"
       entryPoints:
@@ -33,22 +48,40 @@ http:
   services:
     cp-service:
       loadBalancer:
+        serversTransport: cp-mtls
         servers:
-          - url: "http://host.docker.internal:8080"
+          - url: "https://host.docker.internal:8080"
+    admin-ui-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8082"
     wl-importer-service:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8081"
+          - url: "http://host.docker.internal:8090"
     wl-exporter-service:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8090"
+          - url: "http://host.docker.internal:8081"
 
   middlewares:
     cp-client-header:
       headers:
         customRequestHeaders:
           X-Client-Id: "proxy-mtls"
+    admin-api-strip:
+      stripPrefix:
+        prefixes:
+          - /admin/api
+
+  serversTransports:
+    cp-mtls:
+      serverName: localhost
+      rootCAs:
+        - /tls/ca/ca.crt
+      certificates:
+        - certFile: /tls/client/client.crt
+          keyFile: /tls/client/client.key
 
 tls:
   certificates:
@@ -60,9 +93,3 @@ tls:
       keyFile: /certs/wl-importer.localhost.key
     - certFile: /certs/wl-exporter.localhost.crt
       keyFile: /certs/wl-exporter.localhost.key
-  options:
-    cp-mtls:
-      clientAuth:
-        caFiles:
-          - /certs/ca.crt
-        clientAuthType: RequireAndVerifyClientCert

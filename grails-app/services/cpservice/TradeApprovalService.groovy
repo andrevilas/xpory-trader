@@ -7,6 +7,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import java.net.HttpURLConnection
+import java.math.RoundingMode
 
 @Transactional
 class TradeApprovalService {
@@ -14,6 +15,7 @@ class TradeApprovalService {
     private static final Logger LOG = LoggerFactory.getLogger(TradeApprovalService)
 
     PeerTokenService peerTokenService
+    JwtService jwtService
 
     @Transactional(readOnly = true)
     Map listPending(Map params = [:]) {
@@ -73,6 +75,7 @@ class TradeApprovalService {
                     originOfferId     : payload.originOfferId,
                     requestedQuantity : payload.requestedQuantity,
                     unitPrice         : payload.unitPrice,
+                    totalValue        : resolveTotalValue(payload),
                     status            : payload.status,
                     eventTimestamp    : entry.eventTimestamp,
                     source            : 'telemetry'
@@ -89,6 +92,11 @@ class TradeApprovalService {
         // remove trades already decided
         Set<String> decidedTradeIds = TradeApproval.findAllByTradeIdInList(items.collect { it.tradeId })*.tradeId as Set
         List<Map> filtered = items.findAll { !decidedTradeIds.contains(it.tradeId) }
+        Map<String, String> wlNames = resolveWhiteLabelNames(filtered)
+        filtered.each { Map item ->
+            item.wlExporterName = wlNames[item.originWhiteLabelId?.toString()]
+            item.wlImporterName = wlNames[item.targetWhiteLabelId?.toString()]
+        }
 
         return [items: filtered, count: filtered.size()]
     }
@@ -138,6 +146,59 @@ class TradeApprovalService {
         approval.save(flush: true, failOnError: true)
 
         return [approval: approval, exporter: exporterResult]
+    }
+
+    @Transactional(readOnly = true)
+    Map getDetails(String tradeId) {
+        if (!tradeId) {
+            throw new IllegalArgumentException('tradeId is required')
+        }
+        TelemetryEvent event = findLatestPendingTrade(tradeId)
+        if (!event) {
+            throw new IllegalArgumentException('pending trade not found')
+        }
+        Map payload = parsePayload(event.payload)
+        String originId = payload.originWhiteLabelId?.toString()
+        String targetId = payload.targetWhiteLabelId?.toString()
+        if (!originId || !targetId) {
+            throw new IllegalArgumentException('trade missing wl identifiers')
+        }
+        String externalTradeId = payload.externalTradeId?.toString()
+
+        Map exporterDetails = [:]
+        Map importerDetails = [:]
+        try {
+            exporterDetails = fetchCoreDetails(originId, tradeId, false)
+        } catch (Exception ex) {
+            LOG.warn('Failed to fetch exporter trade details tradeId={} wlId={}', tradeId, originId, ex)
+        }
+        boolean importerLookupExternal = !externalTradeId
+        String importerTradeKey = externalTradeId ?: tradeId
+        try {
+            importerDetails = fetchCoreDetails(targetId, importerTradeKey, importerLookupExternal)
+        } catch (Exception ex) {
+            LOG.warn('Failed to fetch importer trade details tradeId={} wlId={}', importerTradeKey, targetId, ex)
+        }
+        if (!exporterDetails && !importerDetails) {
+            throw new IllegalStateException('trade details unavailable')
+        }
+
+        Map<String, String> wlNames = resolveWhiteLabelNames([
+                [originWhiteLabelId: originId, targetWhiteLabelId: targetId]
+        ])
+
+        Map response = [
+                tradeId           : tradeId,
+                externalTradeId   : externalTradeId,
+                originWhiteLabelId: originId,
+                targetWhiteLabelId: targetId,
+                wlExporterName    : wlNames[originId],
+                wlImporterName    : wlNames[targetId],
+                offerName         : exporterDetails?.offer?.name ?: importerDetails?.offer?.name
+        ]
+        response.exporter = buildTradeSide(originId, wlNames[originId], exporterDetails, true)
+        response.importer = buildTradeSide(targetId, wlNames[targetId], importerDetails, false)
+        return response
     }
 
     private TelemetryEvent findLatestPendingTrade(String tradeId) {
@@ -197,6 +258,60 @@ class TradeApprovalService {
         return [statusCode: status, responseBody: responseText, statusAfter: statusAfter]
     }
 
+    private Map fetchCoreDetails(String whiteLabelId, String tradeId, boolean lookupExternal) {
+        if (!whiteLabelId || !tradeId) {
+            return [:]
+        }
+        WhiteLabel whiteLabel = WhiteLabel.get(whiteLabelId)
+        if (!whiteLabel || !whiteLabel.gatewayUrl) {
+            throw new IllegalArgumentException('whiteLabel gatewayUrl missing')
+        }
+        String token = jwtService.issueToken(whiteLabelId, [])
+        String path = "/api/v2/control-plane/trader/purchases/${tradeId}/details"
+        String endpoint = normalizeUrl(whiteLabel.gatewayUrl, path)
+        if (lookupExternal) {
+            endpoint = endpoint + '?lookup=external'
+        }
+        HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection()
+        connection.requestMethod = 'GET'
+        connection.connectTimeout = 5000
+        connection.readTimeout = 15000
+        connection.setRequestProperty('Accept', 'application/json')
+        connection.setRequestProperty('Authorization', "Bearer ${token}")
+
+        int status = connection.responseCode
+        String responseText = status < 400 ? connection.inputStream?.getText('UTF-8') : connection.errorStream?.getText('UTF-8')
+        connection.disconnect()
+        if (status < 200 || status >= 300) {
+            throw new IllegalStateException("core trade details failed with status ${status}")
+        }
+        responseText ? (new JsonSlurper().parseText(responseText) as Map) : [:]
+    }
+
+    private static Map buildTradeSide(String wlId, String wlName, Map details, boolean exporter) {
+        Map side = [
+                wlId  : wlId,
+                wlName: wlName
+        ]
+        Map actor = exporter ? (details?.provider as Map) : (details?.buyer as Map)
+        if (actor) {
+            side.clientName = actor.name
+            side.clientPhone = resolvePhone(actor)
+        }
+        Object price = exporter ? (details?.unitPrice ?: details?.offer?.price) : (details?.purchase?.unitPrice ?: details?.purchase?.value ?: details?.unitPrice)
+        if (price != null) {
+            side.price = price
+        }
+        side
+    }
+
+    private static String resolvePhone(Map actor) {
+        if (!actor) {
+            return null
+        }
+        actor.cell?.toString() ?: actor.phone?.toString()
+    }
+
     private static Map parsePayload(String payload) {
         if (!payload) {
             return null
@@ -206,6 +321,37 @@ class TradeApprovalService {
             return parsed instanceof Map ? (Map) parsed : null
         } catch (Exception ignored) {
             return null
+        }
+    }
+
+    private static BigDecimal resolveTotalValue(Map payload) {
+        if (!payload) {
+            return null
+        }
+        BigDecimal total = safeDecimal(payload.totalPrice ?: payload.totalValue ?: payload.amount)
+        if (total != null) {
+            return total
+        }
+        BigDecimal unit = safeDecimal(payload.unitPrice)
+        Integer qty = safeInt(payload.requestedQuantity ?: payload.confirmedQuantity)
+        if (unit == null || qty == null) {
+            return null
+        }
+        unit.multiply(new BigDecimal(qty)).setScale(2, RoundingMode.HALF_UP)
+    }
+
+    private static Map<String, String> resolveWhiteLabelNames(Collection<Map> items) {
+        if (!items) {
+            return [:]
+        }
+        Set<String> ids = items.collectMany { Map item ->
+            [item.originWhiteLabelId?.toString(), item.targetWhiteLabelId?.toString()]
+        }.findAll { it } as Set
+        if (!ids) {
+            return [:]
+        }
+        WhiteLabel.findAllByIdInList(ids.toList()).collectEntries { WhiteLabel wl ->
+            [(wl.id): wl.name]
         }
     }
 

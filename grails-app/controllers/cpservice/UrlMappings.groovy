@@ -34,6 +34,7 @@ class UrlMappings {
         "/trades/pending"(controller: 'tradeApproval', action: 'pending', method: 'GET')
         "/trades/$tradeId/approve"(controller: 'tradeApproval', action: 'approve', method: 'POST')
         "/trades/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')
+        "/trades/$tradeId/details"(controller: 'tradeApproval', action: 'details', method: 'GET')
         "/auth/login"(controller: 'auth', action: 'login', method: 'POST')
         "/users"(controller: 'adminUser') {
             action = [GET: 'index', POST: 'save']

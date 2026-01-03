@@ -46,6 +46,19 @@ class TradeApprovalController {
         }
     }
 
+    def details() {
+        String tradeId = params.tradeId
+        try {
+            Map result = tradeApprovalService.getDetails(tradeId)
+            render status: HttpStatus.OK.value(), contentType: 'application/json', text: (result as JSON)
+        } catch (IllegalArgumentException ex) {
+            HttpStatus status = ex.message?.contains('pending trade not found') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST
+            render status: status.value(), contentType: 'application/json', text: ([error: ex.message] as JSON)
+        } catch (IllegalStateException ex) {
+            render status: HttpStatus.BAD_GATEWAY.value(), contentType: 'application/json', text: ([error: ex.message] as JSON)
+        }
+    }
+
     private AdminUser resolveUser() {
         String userId = request.getAttribute('adminUserId')?.toString()
         String role = request.getAttribute('adminUserRole')?.toString()

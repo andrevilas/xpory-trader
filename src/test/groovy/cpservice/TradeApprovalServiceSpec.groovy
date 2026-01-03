@@ -8,7 +8,7 @@ import spock.lang.Specification
 class TradeApprovalServiceSpec extends Specification implements ServiceUnitTest<TradeApprovalService>, DataTest {
 
     def setupSpec() {
-        mockDomains TelemetryEvent, TradeApproval
+        mockDomains TelemetryEvent, TradeApproval, WhiteLabel
     }
 
     void "listPending returns latest pending exporter trades and excludes decided"() {
@@ -26,6 +26,8 @@ class TradeApprovalServiceSpec extends Specification implements ServiceUnitTest<
                 requestedQuantity: 1,
                 unitPrice: 10.0
         ]
+        new WhiteLabel(id: 'WL-EXP', name: 'WL Exporter', contactEmail: 'exp@test.com').save(validate: false, flush: true)
+        new WhiteLabel(id: 'WL-IMP', name: 'WL Importer', contactEmail: 'imp@test.com').save(validate: false, flush: true)
         new TelemetryEvent(
                 whiteLabelId: 'WL-EXP',
                 nodeId: 'WL-EXP',

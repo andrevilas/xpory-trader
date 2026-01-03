@@ -78,7 +78,7 @@ class ReportService {
                 ],
                 count       : total,
                 relationships: relationshipsPage.collect { rel ->
-                    Map tradeStats = tradeStatsByPair.get(pairKey(rel.sourceId, rel.targetId)) ?: [:]
+                    Map tradeStats = normalizeTradeStats(tradeStatsByPair.get(pairKey(rel.sourceId, rel.targetId)))
                     [
                             sourceId   : rel.sourceId,
                             targetId   : rel.targetId,
@@ -156,6 +156,33 @@ class ReportService {
             }
         }
         return stats
+    }
+
+    private Map emptyTradeStats() {
+        [
+                counts     : [CONFIRMED: 0, PENDING: 0, REJECTED: 0, UNKNOWN: 0],
+                totals     : [CONFIRMED: BigDecimal.ZERO, PENDING: BigDecimal.ZERO, REJECTED: BigDecimal.ZERO, UNKNOWN: BigDecimal.ZERO],
+                settled    : [count: 0, total: BigDecimal.ZERO],
+                lastTradeAt: null
+        ]
+    }
+
+    private Map normalizeTradeStats(Map raw) {
+        Map normalized = emptyTradeStats()
+        if (!raw) {
+            return normalized
+        }
+        if (raw.counts instanceof Map) {
+            normalized.counts.putAll(raw.counts as Map)
+        }
+        if (raw.totals instanceof Map) {
+            normalized.totals.putAll(raw.totals as Map)
+        }
+        if (raw.settled instanceof Map) {
+            normalized.settled.putAll(raw.settled as Map)
+        }
+        normalized.lastTradeAt = raw.lastTradeAt
+        return normalized
     }
 
     private Map<String, Integer> aggregateTradeStatusTotals(Map<String, Map> statsByPair) {

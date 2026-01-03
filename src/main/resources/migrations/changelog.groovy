@@ -4,4 +4,5 @@ databaseChangeLog = {
     include file: '20251227-policy-audit-and-update-fields.groovy', relativeToChangelogFile: true
     include file: '20251230-wl-id-update-cascade.groovy', relativeToChangelogFile: true
     include file: '20251230-telemetry-last-updated.groovy', relativeToChangelogFile: true
+    include file: '20260103-admin-users-and-approvals.groovy', relativeToChangelogFile: true
 }

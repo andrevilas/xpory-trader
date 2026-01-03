@@ -63,6 +63,16 @@ https://cp.localhost/admin/
 - Admin UI -> API: `VITE_CP_BASE_URL=/admin/api` (mesmo host). O Traefik remove
   o prefixo `/admin/api` e encaminha para o CP.
 
+## Autenticacao e usuarios
+
+- A Admin UI exige login interno (JWT) alem do mTLS.
+- O fluxo completo e: Browser -> Traefik (TLS) -> CP (mTLS) -> UI faz login em `/auth/login`.
+- O CP cria usuarios padrao no bootstrap caso nao existam:
+  - MASTER: `ADMIN_USERS_MASTER_EMAIL` / `ADMIN_USERS_MASTER_PASSWORD` (default `master@xpory.local` / `changeit`)
+  - TRADER: `ADMIN_USERS_TRADER_EMAIL` / `ADMIN_USERS_TRADER_PASSWORD` (default `trader@xpory.local` / `changeit`)
+- A pagina **Usuarios** (apenas MASTER) gerencia novos usuarios e reset de senha.
+- A pagina **Aprovacoes** lista trades pendentes e permite aprovar/rejeitar.
+
 ## Diagnostico rapido
 
 - UI carregando mas API falhando: confirme o CP esta respondendo em

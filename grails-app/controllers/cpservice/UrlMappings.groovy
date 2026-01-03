@@ -31,6 +31,15 @@ class UrlMappings {
             action = [GET: 'list', POST: 'events']
         }
         "/reports/trade-balance"(controller: 'reports', action: 'tradeBalance', method: 'GET')
+        "/trades/pending"(controller: 'tradeApproval', action: 'pending', method: 'GET')
+        "/trades/$tradeId/approve"(controller: 'tradeApproval', action: 'approve', method: 'POST')
+        "/trades/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')
+        "/auth/login"(controller: 'auth', action: 'login', method: 'POST')
+        "/users"(controller: 'adminUser') {
+            action = [GET: 'index', POST: 'save']
+        }
+        "/users/$id"(controller: 'adminUser', action: 'update', method: 'PUT')
+        "/users/$id/reset-password"(controller: 'adminUser', action: 'resetPassword', method: 'POST')
         "/.well-known/jwks.json"(controller: 'jwks', action: 'index', method: 'GET')
         "/wls/$id/keys/rotate"(controller: 'key', action: 'rotate', method: 'POST')
 

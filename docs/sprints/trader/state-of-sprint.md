@@ -6,6 +6,7 @@ Data: 2026-01-03
 
 - CP ingere telemetria `TRADER_PURCHASE` e expõe `/reports/trade-balance` baseado nos eventos.
 - Admin endpoints protegidos por mTLS + allowlist de header/cert.
+- Aprovacoes manuais de trades pendentes com login JWT e usuarios MASTER/TRADER.
 - Balanca global consolidada permanece em planejamento no WL (xpory-core).
 
 ## Estado CP (xpory-trader)
@@ -14,6 +15,9 @@ Data: 2026-01-03
 - `/reports/trade-balance` agrega por par WL e status (CONFIRMED/PENDING/REJECTED).
 - `eventName=TRADE_SETTLED` ou `settlementStatus=SETTLED` alimentam totais settled.
 - Filtros suportados: `from`, `to`, `wlId`, `wlImporter`, `wlExporter`.
+- `/trades/pending` lista pendencias com base na telemetria (`TRADER_PURCHASE` PENDING).
+- `/trades/{tradeId}/approve|reject` persiste decisao e aciona WL exportadora.
+- `/auth/login` e `/users` gerenciam login e cadastro interno (MASTER/TRADER).
 
 ## Dependencias do WL (xpory-core)
 
@@ -33,6 +37,7 @@ Data: 2026-01-03
 - API CP: `docs/sprints/trader/control-plane-api.md`
 - Telemetria CP: `docs/sprints/trader/trader-purchase-telemetry.md`
 - Runbook Admin UI: `docs/runbooks/admin-ui.md`
+- Workplan Aprovacoes: `docs/sprints/trader/manual-approvals-workplan.md`
 
 ## Referencias cruzadas (xpory-core)
 

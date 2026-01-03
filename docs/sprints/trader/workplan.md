@@ -74,3 +74,4 @@ Legenda de status:
 - Divergências de documentação (ex.: JWT HS256 vs RS256) devem ser resolvidas antes de ajustes de implementação.
 - O endpoint `/reports/trade-balance` atual e baseado em telemetria `TRADER_PURCHASE`; a balanca comercial global permanece em planejamento no workplan do xpory-core (`docs/sprints/trader/commercial-balance-workplan.md`).
 - Estado atual consolidado: `docs/sprints/trader/state-of-sprint.md`.
+- Nova sprint (aprovacao manual de trades pendentes): `docs/sprints/trader/manual-approvals-workplan.md`.

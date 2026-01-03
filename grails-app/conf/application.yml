@@ -158,6 +158,14 @@ security:
         allowedHeaderSubjects: ${ADMIN_HEADER_SUBJECTS:}
         allowedCertSubjects: ${ADMIN_CERT_SUBJECTS:}
         allowedCertFingerprints: ${ADMIN_CERT_FINGERPRINTS:}
+    adminUsers:
+        jwtSecret: ${ADMIN_USERS_JWT_SECRET:dev-admin-secret}
+        jwtTtlSeconds: ${ADMIN_USERS_JWT_TTL_SECONDS:3600}
+        bootstrap:
+            masterEmail: ${ADMIN_USERS_MASTER_EMAIL:master@xpory.local}
+            masterPassword: ${ADMIN_USERS_MASTER_PASSWORD:changeit}
+            traderEmail: ${ADMIN_USERS_TRADER_EMAIL:trader@xpory.local}
+            traderPassword: ${ADMIN_USERS_TRADER_PASSWORD:changeit}
     mtls:
         enabled: ${MTLS_ENABLED:true}
         trustStore: ${MTLS_TRUST_STORE:}

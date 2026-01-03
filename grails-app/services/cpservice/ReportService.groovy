@@ -13,12 +13,49 @@ class ReportService {
         String wlId = params?.wlId?.toString()
         String wlImporter = params?.wlImporter?.toString()
         String wlExporter = params?.wlExporter?.toString()
-        List<Relationship> relationships = Relationship.list()
+        String status = params?.status?.toString()
+        Integer limit = params.int('limit') ?: 100
+        Integer offset = params.int('offset') ?: 0
+        limit = Math.min(limit, 200)
+        String statusFilter = status ? status.toLowerCase() : null
+
+        Closure criteriaFilters = {
+            if (wlId) {
+                or {
+                    eq('sourceId', wlId)
+                    eq('targetId', wlId)
+                }
+            }
+            if (wlExporter) {
+                eq('sourceId', wlExporter)
+            }
+            if (wlImporter) {
+                eq('targetId', wlImporter)
+            }
+            if (statusFilter) {
+                eq('status', statusFilter)
+            }
+        }
+
+        List<Relationship> relationshipsForTotals = Relationship.createCriteria().list {
+            criteriaFilters.delegate = delegate
+            criteriaFilters()
+        }
+        Number total = Relationship.createCriteria().count {
+            criteriaFilters.delegate = delegate
+            criteriaFilters()
+        }
+        List<Relationship> relationshipsPage = Relationship.createCriteria().list(max: limit, offset: offset) {
+            criteriaFilters.delegate = delegate
+            criteriaFilters()
+            order('lastUpdated', 'desc')
+        }
+
         Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter)
-        BigDecimal totalLimit = relationships.inject(BigDecimal.ZERO) { acc, rel ->
+        BigDecimal totalLimit = relationshipsForTotals.inject(BigDecimal.ZERO) { acc, rel ->
             acc + (rel.limitAmount ?: BigDecimal.ZERO)
         }
-        Map<String, List<Relationship>> byStatus = relationships.groupBy { it.status ?: 'unknown' }
+        Map<String, List<Relationship>> byStatus = relationshipsForTotals.groupBy { it.status ?: 'unknown' }
         Map<String, Integer> statusCounts = byStatus.collectEntries { k, v -> [k, v.size()] }
         Map<String, Integer> tradeStatusTotals = aggregateTradeStatusTotals(tradeStatsByPair)
 
@@ -32,14 +69,15 @@ class ReportService {
                         wlExporter : wlExporter
                 ],
                 totals      : [
-                        relationships: relationships.size(),
+                        relationships: total,
                         active       : statusCounts.get('active', 0),
                         blocked      : statusCounts.get('blocked', 0),
                         inactive     : statusCounts.get('inactive', 0),
                         totalLimit   : totalLimit,
                         tradeStatusTotals: tradeStatusTotals
                 ],
-                relationships: relationships.collect { rel ->
+                count       : total,
+                relationships: relationshipsPage.collect { rel ->
                     Map tradeStats = tradeStatsByPair.get(pairKey(rel.sourceId, rel.targetId)) ?: [:]
                     [
                             sourceId   : rel.sourceId,

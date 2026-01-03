@@ -14,8 +14,8 @@ class ReportService {
         String wlImporter = params?.wlImporter?.toString()
         String wlExporter = params?.wlExporter?.toString()
         String status = params?.status?.toString()
-        Integer limit = params.int('limit') ?: 100
-        Integer offset = params.int('offset') ?: 0
+        Integer limit = parseInt(params?.limit, 100)
+        Integer offset = parseInt(params?.offset, 0)
         limit = Math.min(limit, 200)
         String statusFilter = status ? status.toLowerCase() : null
 
@@ -137,6 +137,10 @@ class ReportService {
                 stats.put(key, entry)
             }
 
+            if (!(entry.settled instanceof Map)) {
+                entry.settled = [count: 0, total: BigDecimal.ZERO]
+            }
+
             entry.counts[status] = (entry.counts[status] ?: 0) + 1
             if (unitPrice != null && qty != null) {
                 entry.totals[status] = (entry.totals[status] ?: BigDecimal.ZERO) + (unitPrice * qty)
@@ -196,6 +200,20 @@ class ReportService {
 
     private String pairKey(String sourceId, String targetId) {
         return "${sourceId}::${targetId}"
+    }
+
+    private Integer parseInt(Object value, Integer fallback) {
+        if (value == null) {
+            return fallback
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue()
+        }
+        try {
+            return Integer.parseInt(value.toString())
+        } catch (Exception ignored) {
+            return fallback
+        }
     }
 
     private static Date parseDate(Object value) {

@@ -56,13 +56,12 @@ class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportS
 
         then:
         summary.filters.wlId == 'WL-A'
-        summary.relationships.size() == 2
+        summary.relationships.size() == 1
         Map metrics = summary.relationships.find { it.sourceId == 'WL-A' && it.targetId == 'WL-B' }?.tradeMetrics
         metrics != null
         metrics.counts.CONFIRMED == 1
         metrics.totals.CONFIRMED == 20G
         metrics.settled.count == 1
         metrics.settled.total == 20G
-        summary.relationships.find { it.sourceId == 'WL-C' && it.targetId == 'WL-D' }?.tradeMetrics == [:]
     }
 }

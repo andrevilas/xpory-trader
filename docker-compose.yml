@@ -46,6 +46,7 @@ services:
     restart: unless-stopped
 
   admin-ui:
+    image: xpory-trader-admin-ui:latest
     build:
       context: ../../xpory-trader-admin-ui
       args:

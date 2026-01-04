@@ -166,6 +166,8 @@ security:
             masterPassword: ${ADMIN_USERS_MASTER_PASSWORD:changeit}
             traderEmail: ${ADMIN_USERS_TRADER_EMAIL:trader@xpory.local}
             traderPassword: ${ADMIN_USERS_TRADER_PASSWORD:changeit}
+            managerEmail: ${ADMIN_USERS_MANAGER_EMAIL:manager@xpory.local}
+            managerPassword: ${ADMIN_USERS_MANAGER_PASSWORD:changeit}
     mtls:
         enabled: ${MTLS_ENABLED:true}
         trustStore: ${MTLS_TRUST_STORE:}

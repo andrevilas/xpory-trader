@@ -36,11 +36,22 @@ class UrlMappings {
         "/trades/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')
         "/trades/$tradeId/details"(controller: 'tradeApproval', action: 'details', method: 'GET')
         "/auth/login"(controller: 'auth', action: 'login', method: 'POST')
+        "/users/me"(controller: 'adminProfile', action: 'show', method: 'GET')
+        "/users/me"(controller: 'adminProfile', action: 'update', method: 'PUT')
+        "/users/me/password"(controller: 'adminProfile', action: 'updatePassword', method: 'PUT')
         "/users"(controller: 'adminUser') {
             action = [GET: 'index', POST: 'save']
         }
-        "/users/$id"(controller: 'adminUser', action: 'update', method: 'PUT')
-        "/users/$id/reset-password"(controller: 'adminUser', action: 'resetPassword', method: 'POST')
+        "/users/$id"(controller: 'adminUser', action: 'update', method: 'PUT') {
+            constraints {
+                id matches: /[0-9a-fA-F-]{36}/
+            }
+        }
+        "/users/$id/reset-password"(controller: 'adminUser', action: 'resetPassword', method: 'POST') {
+            constraints {
+                id matches: /[0-9a-fA-F-]{36}/
+            }
+        }
         "/.well-known/jwks.json"(controller: 'jwks', action: 'index', method: 'GET')
         "/wls/$id/keys/rotate"(controller: 'key', action: 'rotate', method: 'POST')
 

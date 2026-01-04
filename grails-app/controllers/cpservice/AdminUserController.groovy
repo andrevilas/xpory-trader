@@ -19,6 +19,8 @@ class AdminUserController {
                     [
                             id: user.id,
                             email: user.email,
+                            name: user.name,
+                            phone: user.phone,
                             role: user.role,
                             status: user.status,
                             lastLoginAt: user.lastLoginAt
@@ -34,16 +36,22 @@ class AdminUserController {
             AdminUser user = adminUserService.createUser(
                     payload.email?.toString(),
                     payload.password?.toString(),
-                    payload.role?.toString()
+                    payload.role?.toString(),
+                    payload.name,
+                    payload.phone
             )
             render status: HttpStatus.CREATED.value(), contentType: 'application/json', text: ([
                     id: user.id,
                     email: user.email,
+                    name: user.name,
+                    phone: user.phone,
                     role: user.role,
                     status: user.status
             ] as JSON)
         } catch (IllegalArgumentException ex) {
             render status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json', text: ([error: ex.message] as JSON)
+        } catch (Exception ex) {
+            render status: HttpStatus.BAD_REQUEST.value(), contentType: 'application/json', text: ([error: ex.message ?: 'validation failed'] as JSON)
         }
     }
 
@@ -51,10 +59,17 @@ class AdminUserController {
         String userId = params.id
         Map payload = request.JSON as Map ?: [:]
         try {
+            String requesterRole = request.getAttribute('adminUserRole')?.toString()
+            if (payload.containsKey('email') && requesterRole != AdminUser.ROLE_MASTER) {
+                render status: HttpStatus.FORBIDDEN.value(), contentType: 'application/json', text: ([error: 'Forbidden'] as JSON)
+                return
+            }
             AdminUser user = adminUserService.updateUser(userId, payload)
             render status: HttpStatus.OK.value(), contentType: 'application/json', text: ([
                     id: user.id,
                     email: user.email,
+                    name: user.name,
+                    phone: user.phone,
                     role: user.role,
                     status: user.status
             ] as JSON)
@@ -71,6 +86,8 @@ class AdminUserController {
             render status: HttpStatus.OK.value(), contentType: 'application/json', text: ([
                     id: user.id,
                     email: user.email,
+                    name: user.name,
+                    phone: user.phone,
                     role: user.role,
                     status: user.status
             ] as JSON)

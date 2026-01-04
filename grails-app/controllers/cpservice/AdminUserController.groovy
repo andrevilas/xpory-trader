@@ -33,6 +33,12 @@ class AdminUserController {
     def save() {
         Map payload = request.JSON as Map ?: [:]
         try {
+            String requesterRole = request.getAttribute('adminUserRole')?.toString()
+            String requestedRole = payload.role?.toString()?.trim()?.toUpperCase()
+            if (requestedRole == AdminUser.ROLE_MASTER && requesterRole != AdminUser.ROLE_MASTER) {
+                render status: HttpStatus.FORBIDDEN.value(), contentType: 'application/json', text: ([error: 'Forbidden'] as JSON)
+                return
+            }
             AdminUser user = adminUserService.createUser(
                     payload.email?.toString(),
                     payload.password?.toString(),
@@ -60,6 +66,11 @@ class AdminUserController {
         Map payload = request.JSON as Map ?: [:]
         try {
             String requesterRole = request.getAttribute('adminUserRole')?.toString()
+            String requestedRole = payload.role?.toString()?.trim()?.toUpperCase()
+            if (requestedRole == AdminUser.ROLE_MASTER && requesterRole != AdminUser.ROLE_MASTER) {
+                render status: HttpStatus.FORBIDDEN.value(), contentType: 'application/json', text: ([error: 'Forbidden'] as JSON)
+                return
+            }
             if (payload.containsKey('email') && requesterRole != AdminUser.ROLE_MASTER) {
                 render status: HttpStatus.FORBIDDEN.value(), contentType: 'application/json', text: ([error: 'Forbidden'] as JSON)
                 return

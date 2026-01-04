@@ -9,6 +9,7 @@ class AdminUserAuthInterceptor {
 
     AdminUserAuthInterceptor() {
         match(controller: 'adminUser')
+        match(controller: 'adminProfile')
         match(controller: 'tradeApproval')
     }
 
@@ -34,7 +35,7 @@ class AdminUserAuthInterceptor {
         request.setAttribute('adminUserRole', claims.role)
         request.setAttribute('adminUserEmail', claims.email)
 
-        if (controllerName == 'adminUser' && claims.role != AdminUser.ROLE_MASTER) {
+        if (controllerName == 'adminUser' && !(claims.role in [AdminUser.ROLE_MASTER, AdminUser.ROLE_MANAGER])) {
             render status: HttpStatus.FORBIDDEN.value(), contentType: 'application/json', text: ([error: 'Forbidden'] as JSON)
             return false
         }

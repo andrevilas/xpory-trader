@@ -31,10 +31,18 @@ class UrlMappings {
             action = [GET: 'list', POST: 'events']
         }
         "/reports/trade-balance"(controller: 'reports', action: 'tradeBalance', method: 'GET')
+        "/trades"(controller: 'trade', action: 'index', method: 'GET')
         "/trades/pending"(controller: 'tradeApproval', action: 'pending', method: 'GET')
         "/trades/$tradeId/approve"(controller: 'tradeApproval', action: 'approve', method: 'POST')
         "/trades/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')
         "/trades/$tradeId/details"(controller: 'tradeApproval', action: 'details', method: 'GET')
+        group "/api/v2", {
+            "/trader/purchases/pending"(controller: 'tradeApproval', action: 'pending', method: 'GET')
+            "/trader/purchases/$tradeId/approve"(controller: 'tradeApproval', action: 'approve', method: 'POST')
+            "/trader/purchases/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')
+            "/control-plane/trader/purchases/$tradeId/details"(controller: 'tradeApproval', action: 'details', method: 'GET')
+            "/trader/purchases/$tradeId/details"(controller: 'tradeApproval', action: 'details', method: 'GET')
+        }
         "/auth/login"(controller: 'auth', action: 'login', method: 'POST')
         "/users/me"(controller: 'adminProfile', action: 'show', method: 'GET')
         "/users/me"(controller: 'adminProfile', action: 'update', method: 'PUT')

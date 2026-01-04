@@ -1,19 +1,27 @@
 package cpservice
 
+import grails.core.GrailsApplication
 import grails.gorm.transactions.Transactional
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
 import java.net.HttpURLConnection
 import java.math.RoundingMode
+import java.security.KeyStore
+import java.security.SecureRandom
 
 @Transactional
 class TradeApprovalService {
 
     private static final Logger LOG = LoggerFactory.getLogger(TradeApprovalService)
 
+    GrailsApplication grailsApplication
     PeerTokenService peerTokenService
     JwtService jwtService
 
@@ -112,7 +120,7 @@ class TradeApprovalService {
         if (existing) {
             throw new IllegalStateException('trade already decided')
         }
-        TelemetryEvent event = findLatestPendingTrade(tradeId)
+        TelemetryEvent event = findLatestPendingTrade(tradeId, true)
         if (!event) {
             throw new IllegalArgumentException('pending trade not found')
         }
@@ -153,7 +161,7 @@ class TradeApprovalService {
         if (!tradeId) {
             throw new IllegalArgumentException('tradeId is required')
         }
-        TelemetryEvent event = findLatestPendingTrade(tradeId)
+        TelemetryEvent event = findLatestPendingTrade(tradeId, false)
         if (!event) {
             throw new IllegalArgumentException('pending trade not found')
         }
@@ -201,7 +209,7 @@ class TradeApprovalService {
         return response
     }
 
-    private TelemetryEvent findLatestPendingTrade(String tradeId) {
+    private TelemetryEvent findLatestPendingTrade(String tradeId, boolean allowExternal) {
         List<TelemetryEvent> events = TelemetryEvent.findAllByEventType('TRADER_PURCHASE')
         TelemetryEvent latest = null
         events.each { TelemetryEvent event ->
@@ -215,7 +223,13 @@ class TradeApprovalService {
             if (payload.status?.toString()?.toUpperCase() != 'PENDING') {
                 return
             }
-            if (payload.tradeId?.toString() != tradeId) {
+            String payloadTradeId = payload.tradeId?.toString()
+            String payloadExternalId = payload.externalTradeId?.toString()
+            boolean match = payloadTradeId == tradeId
+            if (!match && allowExternal) {
+                match = payloadExternalId == tradeId
+            }
+            if (!match) {
                 return
             }
             if (!latest || (event.eventTimestamp && event.eventTimestamp.after(latest.eventTimestamp))) {
@@ -236,6 +250,12 @@ class TradeApprovalService {
                 "/api/v2/trader/purchases/${tradeId}/reject"
         String endpoint = normalizeUrl(exporter.gatewayUrl, path)
         HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection()
+        if (connection instanceof HttpsURLConnection) {
+            SSLContext sslContext = buildSslContext()
+            if (sslContext) {
+                ((HttpsURLConnection) connection).setSSLSocketFactory(sslContext.socketFactory)
+            }
+        }
         connection.requestMethod = 'POST'
         connection.connectTimeout = 5000
         connection.readTimeout = 15000
@@ -273,6 +293,12 @@ class TradeApprovalService {
             endpoint = endpoint + '?lookup=external'
         }
         HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection()
+        if (connection instanceof HttpsURLConnection) {
+            SSLContext sslContext = buildSslContext()
+            if (sslContext) {
+                ((HttpsURLConnection) connection).setSSLSocketFactory(sslContext.socketFactory)
+            }
+        }
         connection.requestMethod = 'GET'
         connection.connectTimeout = 5000
         connection.readTimeout = 15000
@@ -403,5 +429,38 @@ class TradeApprovalService {
             return trimmedBase + '/' + path
         }
         return trimmedBase + path
+    }
+
+    private SSLContext buildSslContext() {
+        def cfg = grailsApplication?.config?.security?.mtls ?: [:]
+        boolean enabled = cfg?.enabled in [true, 'true']
+        if (!enabled) {
+            return null
+        }
+        String keyStorePath = cfg?.keyStore?.toString()
+        String keyStorePassword = cfg?.keyStorePassword?.toString()
+        String trustStorePath = cfg?.trustStore?.toString()
+        String trustStorePassword = cfg?.trustStorePassword?.toString()
+        if (!keyStorePath || !keyStorePassword || !trustStorePath || !trustStorePassword) {
+            return null
+        }
+
+        KeyStore keyStore = KeyStore.getInstance(resolveKeyStoreType(cfg?.keyStoreType))
+        keyStore.load(new FileInputStream(keyStorePath), keyStorePassword.toCharArray())
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.defaultAlgorithm)
+        kmf.init(keyStore, keyStorePassword.toCharArray())
+
+        KeyStore trustStore = KeyStore.getInstance(resolveKeyStoreType(cfg?.trustStoreType))
+        trustStore.load(new FileInputStream(trustStorePath), trustStorePassword.toCharArray())
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.defaultAlgorithm)
+        tmf.init(trustStore)
+
+        SSLContext context = SSLContext.getInstance('TLS')
+        context.init(kmf.keyManagers, tmf.trustManagers, new SecureRandom())
+        return context
+    }
+
+    private String resolveKeyStoreType(Object raw) {
+        return raw?.toString() ?: 'PKCS12'
     }
 }

@@ -39,6 +39,12 @@ services:
       ADMIN_USERS_MASTER_PASSWORD: ${ADMIN_USERS_MASTER_PASSWORD:-changeit}
       ADMIN_USERS_TRADER_EMAIL: ${ADMIN_USERS_TRADER_EMAIL:-trader@xpory.local}
       ADMIN_USERS_TRADER_PASSWORD: ${ADMIN_USERS_TRADER_PASSWORD:-changeit}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "wl-exporter.localhost:host-gateway"
+      - "wl-importer.localhost:host-gateway"
+      - "cp.localhost:host-gateway"
+      - "cp-jwks.localhost:host-gateway"
     ports:
       - "8080:8080"
     volumes:

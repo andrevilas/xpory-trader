@@ -173,17 +173,41 @@ class TradeApprovalService {
         }
         String externalTradeId = payload.externalTradeId?.toString()
 
+        String role = payload.role?.toString()?.toUpperCase()
+        String exporterTradeKey = tradeId
+        boolean exporterLookupExternal = false
+        String importerTradeKey = tradeId
+        boolean importerLookupExternal = false
+        if (role == 'IMPORTER') {
+            exporterTradeKey = externalTradeId ?: tradeId
+            exporterLookupExternal = false
+            importerTradeKey = tradeId
+            importerLookupExternal = false
+        } else if (role == 'EXPORTER') {
+            exporterTradeKey = tradeId
+            exporterLookupExternal = false
+            importerTradeKey = externalTradeId ?: tradeId
+            importerLookupExternal = externalTradeId ? true : false
+        } else {
+            importerTradeKey = externalTradeId ?: tradeId
+            importerLookupExternal = externalTradeId ? true : false
+        }
+
         Map exporterDetails = [:]
         Map importerDetails = [:]
         try {
-            exporterDetails = fetchCoreDetails(originId, tradeId, false)
+            exporterDetails = fetchCoreDetails(originId, exporterTradeKey, exporterLookupExternal)
+            if (!exporterDetails && externalTradeId && exporterTradeKey != externalTradeId) {
+                exporterDetails = fetchCoreDetails(originId, externalTradeId, true)
+            }
         } catch (Exception ex) {
-            LOG.warn('Failed to fetch exporter trade details tradeId={} wlId={}', tradeId, originId, ex)
+            LOG.warn('Failed to fetch exporter trade details tradeId={} wlId={}', exporterTradeKey, originId, ex)
         }
-        boolean importerLookupExternal = !externalTradeId
-        String importerTradeKey = externalTradeId ?: tradeId
         try {
             importerDetails = fetchCoreDetails(targetId, importerTradeKey, importerLookupExternal)
+            if (!importerDetails && externalTradeId && importerTradeKey != externalTradeId) {
+                importerDetails = fetchCoreDetails(targetId, externalTradeId, true)
+            }
         } catch (Exception ex) {
             LOG.warn('Failed to fetch importer trade details tradeId={} wlId={}', importerTradeKey, targetId, ex)
         }

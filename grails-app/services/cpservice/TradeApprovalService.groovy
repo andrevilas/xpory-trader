@@ -161,9 +161,9 @@ class TradeApprovalService {
         if (!tradeId) {
             throw new IllegalArgumentException('tradeId is required')
         }
-        TelemetryEvent event = findLatestPendingTrade(tradeId, false)
+        TelemetryEvent event = findLatestTradeEvent(tradeId, true)
         if (!event) {
-            throw new IllegalArgumentException('pending trade not found')
+            throw new IllegalArgumentException('trade not found')
         }
         Map payload = parsePayload(event.payload)
         String originId = payload.originWhiteLabelId?.toString()
@@ -188,7 +188,7 @@ class TradeApprovalService {
             LOG.warn('Failed to fetch importer trade details tradeId={} wlId={}', importerTradeKey, targetId, ex)
         }
         if (!exporterDetails && !importerDetails) {
-            throw new IllegalStateException('trade details unavailable')
+            LOG.warn('Trade details unavailable for tradeId={}', tradeId)
         }
 
         Map<String, String> wlNames = resolveWhiteLabelNames([
@@ -225,9 +225,41 @@ class TradeApprovalService {
             }
             String payloadTradeId = payload.tradeId?.toString()
             String payloadExternalId = payload.externalTradeId?.toString()
+            String eventId = event.id?.toString()
             boolean match = payloadTradeId == tradeId
             if (!match && allowExternal) {
                 match = payloadExternalId == tradeId
+            }
+            if (!match && eventId) {
+                match = eventId == tradeId
+            }
+            if (!match) {
+                return
+            }
+            if (!latest || (event.eventTimestamp && event.eventTimestamp.after(latest.eventTimestamp))) {
+                latest = event
+            }
+        }
+        return latest
+    }
+
+    private TelemetryEvent findLatestTradeEvent(String tradeId, boolean allowExternal) {
+        List<TelemetryEvent> events = TelemetryEvent.findAllByEventType('TRADER_PURCHASE')
+        TelemetryEvent latest = null
+        events.each { TelemetryEvent event ->
+            Map payload = parsePayload(event.payload)
+            if (!payload) {
+                return
+            }
+            String payloadTradeId = payload.tradeId?.toString()
+            String payloadExternalId = payload.externalTradeId?.toString()
+            String eventId = event.id?.toString()
+            boolean match = payloadTradeId == tradeId
+            if (!match && allowExternal) {
+                match = payloadExternalId == tradeId
+            }
+            if (!match && eventId) {
+                match = eventId == tradeId
             }
             if (!match) {
                 return

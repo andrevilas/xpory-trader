@@ -7,21 +7,25 @@ import spock.lang.Specification
 
 class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportService>, DataTest {
 
-    def setupSpec() {
+    def setup() {
         mockDomains Relationship, TelemetryEvent
     }
 
     void "tradeBalanceSummary aggregates settled totals and applies filters"() {
         given:
-        Relationship rel = new Relationship(sourceId: 'WL-A', targetId: 'WL-B', limitAmount: 100G).save(validate: false, flush: true)
-        new Relationship(sourceId: 'WL-C', targetId: 'WL-D', limitAmount: 50G).save(validate: false, flush: true)
+        String wlA = '11111111-1111-1111-1111-111111111111'
+        String wlB = '22222222-2222-2222-2222-222222222222'
+        String wlC = '33333333-3333-3333-3333-333333333333'
+        String wlD = '44444444-4444-4444-4444-444444444444'
+        Relationship rel = new Relationship(sourceId: wlA, targetId: wlB, limitAmount: 100G).save(validate: false, flush: true)
+        new Relationship(sourceId: wlC, targetId: wlD, limitAmount: 50G).save(validate: false, flush: true)
 
         Date now = new Date()
         Date yesterday = new Date(now.time - 24L * 60L * 60L * 1000L)
 
         Map payload = [
-                originWhiteLabelId: 'WL-A',
-                targetWhiteLabelId: 'WL-B',
+                originWhiteLabelId: wlA,
+                targetWhiteLabelId: wlB,
                 status            : 'CONFIRMED',
                 unitPrice         : 10.00,
                 requestedQuantity : 2,
@@ -30,20 +34,20 @@ class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportS
                 settlementStatus  : 'SETTLED'
         ]
         new TelemetryEvent(
-                whiteLabelId: 'WL-B',
-                nodeId: 'WL-B',
+                whiteLabelId: wlB,
+                nodeId: wlB,
                 eventType: 'TRADER_PURCHASE',
                 payload: JsonOutput.toJson(payload),
                 eventTimestamp: now
         ).save(validate: false, flush: true)
 
         new TelemetryEvent(
-                whiteLabelId: 'WL-D',
-                nodeId: 'WL-D',
+                whiteLabelId: wlD,
+                nodeId: wlD,
                 eventType: 'TRADER_PURCHASE',
                 payload: JsonOutput.toJson([
-                        originWhiteLabelId: 'WL-C',
-                        targetWhiteLabelId: 'WL-D',
+                        originWhiteLabelId: wlC,
+                        targetWhiteLabelId: wlD,
                         status            : 'PENDING',
                         unitPrice         : 5.00,
                         requestedQuantity : 1
@@ -52,12 +56,12 @@ class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportS
         ).save(validate: false, flush: true)
 
         when:
-        Map summary = service.tradeBalanceSummary([wlId: 'WL-A', from: yesterday, to: now])
+        Map summary = service.tradeBalanceSummary([wlId: wlA, from: yesterday, to: now])
 
         then:
-        summary.filters.wlId == 'WL-A'
+        summary.filters.wlId == wlA
         summary.relationships.size() == 1
-        Map metrics = summary.relationships.find { it.sourceId == 'WL-A' && it.targetId == 'WL-B' }?.tradeMetrics
+        Map metrics = summary.relationships.find { it.sourceId == wlA && it.targetId == wlB }?.tradeMetrics
         metrics != null
         metrics.counts.CONFIRMED == 1
         metrics.totals.CONFIRMED == 20G

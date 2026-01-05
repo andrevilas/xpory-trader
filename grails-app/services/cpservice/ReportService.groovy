@@ -18,7 +18,6 @@ class ReportService {
         Integer offset = parseInt(params?.offset, 0)
         limit = Math.min(limit, 200)
         String statusFilter = status ? status.toLowerCase() : null
-
         Closure criteriaFilters = {
             if (wlId) {
                 or {
@@ -40,16 +39,13 @@ class ReportService {
         List<Relationship> relationshipsForTotals = Relationship.createCriteria().list {
             criteriaFilters.delegate = delegate
             criteriaFilters()
-        }
-        Number total = Relationship.createCriteria().count {
-            criteriaFilters.delegate = delegate
-            criteriaFilters()
-        }
-        List<Relationship> relationshipsPage = Relationship.createCriteria().list(max: limit, offset: offset) {
-            criteriaFilters.delegate = delegate
-            criteriaFilters()
             order('lastUpdated', 'desc')
         }
+        relationshipsForTotals = relationshipsForTotals.findAll { Relationship rel ->
+            isUuid(rel.sourceId) && isUuid(rel.targetId)
+        }
+        Number total = relationshipsForTotals.size()
+        List<Relationship> relationshipsPage = relationshipsForTotals.drop(offset).take(limit)
 
         Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter)
         BigDecimal totalLimit = relationshipsForTotals.inject(BigDecimal.ZERO) { acc, rel ->
@@ -90,6 +86,13 @@ class ReportService {
                     ]
                 }
         ]
+    }
+
+    private boolean isUuid(String value) {
+        if (!value) {
+            return false
+        }
+        value ==~ /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
     }
 
     private Map<String, Map> buildTradeStats(Date from, Date to, String wlId, String wlImporter, String wlExporter) {

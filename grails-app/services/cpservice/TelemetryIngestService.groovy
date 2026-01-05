@@ -13,6 +13,7 @@ class TelemetryIngestService {
 
     TraderAccountService traderAccountService
     TradeMetricsService tradeMetricsService
+    NotificationService notificationService
 
     List<TelemetryEvent> ingest(Collection<Map> events) {
         if (!events) {
@@ -22,6 +23,10 @@ class TelemetryIngestService {
             TelemetryEvent stored = persistEvent(event)
             traderAccountService?.processTelemetry(stored, event)
             recordTradeMetrics(event)
+            if (event?.eventType == 'TRADER_PURCHASE') {
+                Map payload = (event.payload instanceof Map) ? (Map) event.payload : [:]
+                notificationService?.processTradeTelemetry(stored, payload)
+            }
             stored
         }
     }

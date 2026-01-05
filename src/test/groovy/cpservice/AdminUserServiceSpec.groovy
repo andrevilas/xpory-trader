@@ -37,7 +37,7 @@ class AdminUserServiceSpec extends Specification implements ServiceUnitTest<Admi
         service.authenticate('user@xpory.local', 'wrong') == null
     }
 
-    void \"update profile updates name and phone only\"() {
+    void "update profile updates name and phone only"() {
         given:
         AdminUser user = service.createUser('profile@xpory.local', 'secret', AdminUser.ROLE_TRADER)
 
@@ -49,7 +49,7 @@ class AdminUserServiceSpec extends Specification implements ServiceUnitTest<Admi
         updated.phone == '+5511999999999'
     }
 
-    void \"update password validates current password\"() {
+    void "update password validates current password"() {
         given:
         AdminUser user = service.createUser('password@xpory.local', 'secret', AdminUser.ROLE_TRADER)
 
@@ -67,7 +67,7 @@ class AdminUserServiceSpec extends Specification implements ServiceUnitTest<Admi
         service.authenticate('password@xpory.local', 'new-secret') != null
     }
 
-    void \"update user allows email change\"() {
+    void "update user allows email change"() {
         given:
         AdminUser user = service.createUser('old@xpory.local', 'secret', AdminUser.ROLE_TRADER)
 

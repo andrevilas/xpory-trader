@@ -11,6 +11,7 @@ class AdminUserAuthInterceptor {
         match(controller: 'adminUser')
         match(controller: 'adminProfile')
         match(controller: 'tradeApproval')
+        match(controller: 'notification')
     }
 
     boolean before() {

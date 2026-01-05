@@ -60,6 +60,13 @@ class UrlMappings {
                 id matches: /[0-9a-fA-F-]{36}/
             }
         }
+        "/notifications"(controller: 'notification', action: 'index', method: 'GET')
+        "/notifications/unread-count"(controller: 'notification', action: 'unreadCount', method: 'GET')
+        "/notifications/$id/read"(controller: 'notification', action: 'read', method: 'POST') {
+            constraints {
+                id matches: /[0-9a-fA-F-]{36}/
+            }
+        }
         "/.well-known/jwks.json"(controller: 'jwks', action: 'index', method: 'GET')
         "/wls/$id/keys/rotate"(controller: 'key', action: 'rotate', method: 'POST')
 

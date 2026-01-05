@@ -10,6 +10,16 @@ http:
         - admin-api-strip
       priority: 200
       tls: {}
+    admin-ws-router:
+      rule: "Host(`cp.localhost`) && PathPrefix(`/admin/wsxpory`)"
+      entryPoints:
+        - websecure
+      service: cp-service
+      middlewares:
+        - cp-client-header
+        - admin-ws-strip
+      priority: 210
+      tls: {}
     admin-ui-router:
       rule: "Host(`cp.localhost`) && PathPrefix(`/admin`)"
       entryPoints:
@@ -69,6 +79,10 @@ http:
       headers:
         customRequestHeaders:
           X-Client-Id: "proxy-mtls"
+    admin-ws-strip:
+      stripPrefix:
+        prefixes:
+          - /admin
     admin-api-strip:
       stripPrefix:
         prefixes:

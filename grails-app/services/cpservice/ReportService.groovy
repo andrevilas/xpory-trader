@@ -18,6 +18,7 @@ class ReportService {
         Integer offset = parseInt(params?.offset, 0)
         limit = Math.min(limit, 200)
         String statusFilter = status ? status.toLowerCase() : null
+        boolean pairFilter = wlExporter && wlImporter
         Closure criteriaFilters = {
             if (wlId) {
                 or {
@@ -25,11 +26,24 @@ class ReportService {
                     eq('targetId', wlId)
                 }
             }
-            if (wlExporter) {
-                eq('sourceId', wlExporter)
-            }
-            if (wlImporter) {
-                eq('targetId', wlImporter)
+            if (pairFilter) {
+                or {
+                    and {
+                        eq('sourceId', wlExporter)
+                        eq('targetId', wlImporter)
+                    }
+                    and {
+                        eq('sourceId', wlImporter)
+                        eq('targetId', wlExporter)
+                    }
+                }
+            } else {
+                if (wlExporter) {
+                    eq('sourceId', wlExporter)
+                }
+                if (wlImporter) {
+                    eq('targetId', wlImporter)
+                }
             }
             if (statusFilter) {
                 eq('status', statusFilter)
@@ -44,10 +58,42 @@ class ReportService {
         relationshipsForTotals = relationshipsForTotals.findAll { Relationship rel ->
             isUuid(rel.sourceId) && isUuid(rel.targetId)
         }
-        Number total = relationshipsForTotals.size()
-        List<Relationship> relationshipsPage = relationshipsForTotals.drop(offset).take(limit)
-
-        Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter)
+        Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter, pairFilter)
+        Map<String, Map> pairs = buildPairEntries(relationshipsForTotals)
+        pairs.values().each { Map entry ->
+            String wlAId = entry.wlAId?.toString()
+            String wlBId = entry.wlBId?.toString()
+            Map aToBStats = normalizeTradeStats(tradeStatsByPair.get(pairKey(wlAId, wlBId)))
+            Map bToAStats = normalizeTradeStats(tradeStatsByPair.get(pairKey(wlBId, wlAId)))
+            entry.tradeMetrics = [
+                    aToB: aToBStats,
+                    bToA: bToAStats
+            ]
+            BigDecimal totalExported = confirmedTotal(aToBStats)
+            BigDecimal totalImported = confirmedTotal(bToAStats)
+            entry.totals = [
+                    totalExported: totalExported,
+                    totalImported: totalImported,
+                    balance: totalExported - totalImported
+            ]
+            entry.lastTradeAt = maxDate(aToBStats.lastTradeAt as Date, bToAStats.lastTradeAt as Date)
+        }
+        List<Map> pairList = pairs.values().toList().sort { Map left, Map right ->
+            Date leftDate = left.lastUpdated ?: left.lastTradeAt
+            Date rightDate = right.lastUpdated ?: right.lastTradeAt
+            if (leftDate == rightDate) {
+                return 0
+            }
+            if (leftDate == null) {
+                return 1
+            }
+            if (rightDate == null) {
+                return -1
+            }
+            return rightDate <=> leftDate
+        }
+        Number total = pairList.size()
+        List<Map> relationshipsPage = pairList.drop(offset).take(limit)
         BigDecimal totalLimit = relationshipsForTotals.inject(BigDecimal.ZERO) { acc, rel ->
             acc + (rel.limitAmount ?: BigDecimal.ZERO)
         }
@@ -73,18 +119,7 @@ class ReportService {
                         tradeStatusTotals: tradeStatusTotals
                 ],
                 count       : total,
-                relationships: relationshipsPage.collect { rel ->
-                    Map tradeStats = normalizeTradeStats(tradeStatsByPair.get(pairKey(rel.sourceId, rel.targetId)))
-                    [
-                            sourceId   : rel.sourceId,
-                            targetId   : rel.targetId,
-                            fxRate     : rel.fxRate,
-                            limitAmount: rel.limitAmount,
-                            status     : rel.status,
-                            updatedAt  : rel.lastUpdated,
-                            tradeMetrics: tradeStats
-                    ]
-                }
+                relationships: relationshipsPage
         ]
     }
 
@@ -95,7 +130,7 @@ class ReportService {
         value ==~ /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
     }
 
-    private Map<String, Map> buildTradeStats(Date from, Date to, String wlId, String wlImporter, String wlExporter) {
+    private Map<String, Map> buildTradeStats(Date from, Date to, String wlId, String wlImporter, String wlExporter, boolean pairFilter) {
         List<TelemetryEvent> events = TelemetryEvent.findAllByEventType('TRADER_PURCHASE')
         Map<String, Map> stats = [:]
         events.each { TelemetryEvent event ->
@@ -114,11 +149,19 @@ class ReportService {
             if (wlId && !(wlId == sourceId || wlId == targetId)) {
                 return
             }
-            if (wlExporter && wlExporter != sourceId) {
-                return
-            }
-            if (wlImporter && wlImporter != targetId) {
-                return
+            if (pairFilter) {
+                boolean matchesPair = (wlExporter == sourceId && wlImporter == targetId) ||
+                        (wlExporter == targetId && wlImporter == sourceId)
+                if (!matchesPair) {
+                    return
+                }
+            } else {
+                if (wlExporter && wlExporter != sourceId) {
+                    return
+                }
+                if (wlImporter && wlImporter != targetId) {
+                    return
+                }
             }
             String status = payload.status?.toString()?.toUpperCase() ?: 'UNKNOWN'
             String eventName = payload.eventName?.toString()?.toUpperCase()
@@ -230,6 +273,96 @@ class ReportService {
 
     private String pairKey(String sourceId, String targetId) {
         return "${sourceId}::${targetId}"
+    }
+
+    private Map<String, Map> buildPairEntries(List<Relationship> relationships) {
+        Map<String, Map> pairs = [:]
+        relationships.each { Relationship rel ->
+            String wlAId = canonicalFirst(rel.sourceId, rel.targetId)
+            String wlBId = canonicalSecond(rel.sourceId, rel.targetId)
+            String key = pairKey(wlAId, wlBId)
+            Map entry = pairs.get(key)
+            if (!entry) {
+                entry = [
+                        wlAId       : wlAId,
+                        wlBId       : wlBId,
+                        availability: [hasAToB: false, hasBToA: false],
+                        relationships: [aToB: null, bToA: null],
+                        lastUpdated : null
+                ]
+                pairs.put(key, entry)
+            }
+            Map relSnapshot = relationshipSnapshot(rel)
+            boolean aToB = rel.sourceId == wlAId && rel.targetId == wlBId
+            if (aToB) {
+                entry.relationships.aToB = relSnapshot
+                entry.availability.hasAToB = true
+            } else {
+                entry.relationships.bToA = relSnapshot
+                entry.availability.hasBToA = true
+            }
+            Date relUpdatedAt = rel.lastUpdated
+            if (!entry.lastUpdated || (relUpdatedAt && relUpdatedAt.after(entry.lastUpdated as Date))) {
+                entry.lastUpdated = relUpdatedAt
+            }
+        }
+        return pairs
+    }
+
+    private Map relationshipSnapshot(Relationship rel) {
+        [
+                sourceId   : rel.sourceId,
+                targetId   : rel.targetId,
+                fxRate     : rel.fxRate,
+                limitAmount: rel.limitAmount,
+                status     : rel.status,
+                updatedAt  : rel.lastUpdated
+        ]
+    }
+
+    private String canonicalFirst(String first, String second) {
+        if (first == null) {
+            return second
+        }
+        if (second == null) {
+            return first
+        }
+        return first <= second ? first : second
+    }
+
+    private String canonicalSecond(String first, String second) {
+        if (first == null) {
+            return second
+        }
+        if (second == null) {
+            return first
+        }
+        return first <= second ? second : first
+    }
+
+    private BigDecimal confirmedTotal(Map stats) {
+        if (!stats) {
+            return BigDecimal.ZERO
+        }
+        Map totals = stats.totals instanceof Map ? (Map) stats.totals : [:]
+        Object value = totals.CONFIRMED
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value
+        }
+        if (value instanceof Number) {
+            return new BigDecimal(value.toString())
+        }
+        return BigDecimal.ZERO
+    }
+
+    private Date maxDate(Date left, Date right) {
+        if (left == null) {
+            return right
+        }
+        if (right == null) {
+            return left
+        }
+        return left.after(right) ? left : right
     }
 
     private Integer parseInt(Object value, Integer fallback) {

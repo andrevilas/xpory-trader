@@ -8,9 +8,12 @@ Resetar o ambiente local (CP + WLs), recriar WLs/politicas/relacionamentos via A
 ## Pre-requisitos
 - CP + Traefik ativos (xpory-trader).
 - Exporter (wl-exporter) e Importer (wl-importer) ativos (xpory-core).
-- /etc/hosts:
-  - 127.0.0.1 cp.localhost cp-jwks.localhost wl-importer.localhost wl-exporter.localhost
 - Certificados Traefik do repo xpory-trader.
+
+## /etc/hosts (staging local)
+```
+127.0.0.1 cp.localhost cp-jwks.localhost wl-importer.localhost wl-exporter.localhost
+```
 
 ## 0) Subir stack
 ```bash
@@ -285,11 +288,11 @@ npx playwright test -c playwright/playwright.config.ts playwright/tests/prefligh
   - Abrir modal de detalhes (deve trazer oferta e comprador/vendedor, sem '-').
 
 ## Runbooks de cenarios de export_policy
-- `export-policy-scenario-no-exportable.md`
-- `export-policy-scenario-single-category.md`
-- `export-policy-scenario-exclude-category.md`
-- `export-policy-scenario-entity-allowlist.md`
-- `export-policy-scenario-entity-blocklist.md`
+- [export-policy-scenario-no-exportable.md](export-policy-scenario-no-exportable.md)
+- [export-policy-scenario-single-category.md](export-policy-scenario-single-category.md)
+- [export-policy-scenario-exclude-category.md](export-policy-scenario-exclude-category.md)
+- [export-policy-scenario-entity-allowlist.md](export-policy-scenario-entity-allowlist.md)
+- [export-policy-scenario-entity-blocklist.md](export-policy-scenario-entity-blocklist.md)
 
 ## Observacoes
 - Caso as compras falhem com "Erro ao debitar em X$", verificar se a tabela `xtransaction_maturity` foi zerada indevidamente. Nesse caso, reestabelecer dados de maturidade (via processo de seeding/app) antes de repetir as compras.

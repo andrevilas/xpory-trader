@@ -4,7 +4,7 @@
 Validar exportacao com exclusao de uma categoria especifica.
 
 ## Pre-requisitos
-- Ambiente resetado via `cp-full-reset-and-trade-validation.md`.
+- Ambiente resetado via `reset-environment.md`.
 - Snapshot de categorias sincronizado no CP.
 
 ## Passos
@@ -32,5 +32,8 @@ curl -sk -X PUT "https://cp.localhost/admin/api/relationships/${EXPORTER_WL}/${I
 3) Sincronizar ofertas no importer.
 4) Validar que nenhuma oferta da categoria excluida foi importada.
 
-## Validacoes
+## Validacao
 - `imported_offer` nao contem `category_id=<CATEGORY_ID>`.
+
+## Relacionados
+- `reset-environment.md`

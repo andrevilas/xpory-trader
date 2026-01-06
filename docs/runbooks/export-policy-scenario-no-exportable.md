@@ -4,7 +4,7 @@
 Validar que nenhuma oferta e exportada quando a politica de exportacao remove todas as ofertas.
 
 ## Pre-requisitos
-- Ambiente resetado via `cp-full-reset-and-trade-validation.md`.
+- Ambiente resetado via `reset-environment.md`.
 - WL exporter/importer ativos.
 - Snapshot de categorias e entidades sincronizados no CP.
 
@@ -37,6 +37,9 @@ curl -sk -X PUT "https://cp.localhost/admin/api/relationships/${EXPORTER_WL}/${I
 3) Executar a sincronizacao de ofertas no importer.
 4) Validar que `imported_offer` nao recebeu ofertas (0 itens).
 
-## Validacoes
+## Validacao
 - Endpoint de importacao retorna `count=0` ou tabela `imported_offer` vazia.
 - CP mostra relacionamento ativo com `export_policy` presente.
+
+## Relacionados
+- `reset-environment.md`

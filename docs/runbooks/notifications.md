@@ -1,16 +1,17 @@
 # Runbook: Notificacoes (CP + Admin UI)
 
-Objetivo: validar notificacoes em tempo real (STOMP/SockJS) e APIs de listagem/leitura.
+## Objetivo
+Validar notificacoes em tempo real (STOMP/SockJS) e APIs de listagem/leitura.
 
 ## Pre-requisitos
-
 - CP (xpory-trader) rodando com migrations aplicadas.
 - Admin UI rodando com `VITE_CP_BASE_URL` apontando para o CP.
 - Token valido de um usuario admin (MASTER/MANAGER/TRADER conforme o teste).
 
-## Endpoints HTTP
+## Passos
 
-Base: `${CP_BASE_URL}` (ex: http://localhost:8082/admin/api)
+### 1) Endpoints HTTP
+Base: `${CP_BASE_URL}` (ex.: http://localhost:8082/admin/api)
 
 - Listar notificacoes:
   - `GET /notifications?limit=50&offset=0`
@@ -19,8 +20,7 @@ Base: `${CP_BASE_URL}` (ex: http://localhost:8082/admin/api)
 - Marcar como lida:
   - `POST /notifications/{id}/read`
 
-## WebSocket (STOMP/SockJS)
-
+### 2) WebSocket (STOMP/SockJS)
 Endpoint SockJS: `${CP_WS_URL}/wsxpory`
 
 Topico por usuario:
@@ -31,8 +31,7 @@ Payload esperado:
 {"kind":"notification","payload":{...}}
 ```
 
-## Fluxos de validacao
-
+### 3) Fluxos de validacao
 1) Login e token
 - Autentique no CP e capture o bearer token.
 
@@ -57,11 +56,19 @@ Payload esperado:
 - `GET /notifications/unread-count` reflete o numero correto.
 - `POST /notifications/{id}/read` marca como lida.
 
-## Observacoes
+## Validacao
+- Mensagens chegam no topico do usuario correto.
+- Contador de nao lidas atualiza apos marcar como lida.
+- Filtros de audiencia respeitam roles.
 
+## Observacoes
 - `LIMIT_*` considera soma de trades CONFIRMED + PENDING.
 - Mensagem inclui `origin -> target | total / limite` quando aplicavel.
 - Rotas em Admin UI:
   - `OPEN_TRADES` -> `/trades?sourceId=...&targetId=...`
   - `OPEN_PENDING_TRADES` -> `/trades/pending?wlExporter=...&wlImporter=...`
   - `OPEN_RELATIONSHIP` -> `/relationships?sourceId=...&targetId=...`
+
+## Relacionados
+- `admin-ui.md`
+- `reset-environment.md`

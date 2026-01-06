@@ -4,7 +4,7 @@
 Validar exportacao limitada a uma unica categoria.
 
 ## Pre-requisitos
-- Ambiente resetado via `cp-full-reset-and-trade-validation.md`.
+- Ambiente resetado via `reset-environment.md`.
 - Snapshot de categorias sincronizado no CP.
 
 ## Passos
@@ -34,6 +34,9 @@ curl -sk -X PUT "https://cp.localhost/admin/api/relationships/${EXPORTER_WL}/${I
 3) Executar a sincronizacao de ofertas no importer.
 4) Validar que apenas ofertas da categoria selecionada foram importadas.
 
-## Validacoes
+## Validacao
 - `imported_offer` contem apenas ofertas com `category_id` esperado.
 - CP exibe a policy aplicada.
+
+## Relacionados
+- `reset-environment.md`

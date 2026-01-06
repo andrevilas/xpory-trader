@@ -4,7 +4,7 @@
 Validar exportacao restrita a entidades permitidas.
 
 ## Pre-requisitos
-- Ambiente resetado via `cp-full-reset-and-trade-validation.md`.
+- Ambiente resetado via `reset-environment.md`.
 - Snapshot de entidades sincronizado no CP.
 
 ## Passos
@@ -32,5 +32,8 @@ curl -sk -X PUT "https://cp.localhost/admin/api/relationships/${EXPORTER_WL}/${I
 3) Sincronizar ofertas no importer.
 4) Validar que apenas ofertas da entidade whitelisted foram importadas.
 
-## Validacoes
+## Validacao
 - `imported_offer` contem apenas `entity_id=<ENTITY_ID>`.
+
+## Relacionados
+- `reset-environment.md`

@@ -3,20 +3,20 @@
 ## Contexto
 Hoje a exportacao de ofertas segue um padrao amplo e deve virar fallback. A regra principal passa a ser definida pelo relacionamento exporter -> importer, incluindo criterios de exportacao. A exportacao sempre considera apenas ofertas ativas.
 
-Objetivo: permitir que o Control Plane (xpory-trader) defina politicas de exportacao por relacionamento, com schema JSON flexivel, e que o exporter (xpory-core) aplique esses filtros ao exportar.
+Objetivo: permitir que o Control Plane (xpory-trader) defina politicas de exportacao por relacionamento, com schema flexivel, e que o exporter (xpory-core) aplique esses filtros ao exportar.
 
 ## Regras base
 - Ofertas exportadas devem estar ativas.
 - Politica por relacionamento e direcional (exporter -> importer).
-- O schema deve ser flexivel (JSON) e documentado.
+- O schema deve ser flexivel e documentado.
 - Se a politica estiver ausente ou `enabled=false`, usar comportamento atual (fallback).
 
 ## Contrato do export_policy
-### Campos suportados (JSON)
+### Campos suportados
 ```
 export_policy: {
   enabled: boolean,
-  min_created_at: string (ISO-8601),
+  min_created_at: string (ISO-8601, UTC, com sufixo 'Z'),
   price_min: decimal,
   price_max: decimal,
   include_categories: [string],
@@ -35,8 +35,9 @@ export_policy: {
 3) `include_categories` e allowlist; se vazio/nulo, nao restringe.
 4) `exclude_categories` sempre remove mesmo se estiver na allowlist.
 5) `price_min/price_max` sao limites inclusivos.
-6) `min_created_at` inclui apenas ofertas criadas a partir da data.
+6) `min_created_at` inclui apenas ofertas criadas a partir da data (interpretar em UTC; exigir sufixo `Z`).
 7) `include_domestic` e `include_under_budget` aplicam filtro booleano quando definidos.
+8) `entity_allowlist` e `include_categories` se acumulam (ambos aplicam).
 
 ### Exemplo A (categoria + data)
 ```json
@@ -72,78 +73,66 @@ export_policy: {
 }
 ```
 
-## Workplan por componente
+## Workplan por componente (checklist)
 
 ### 1) Control Plane (xpory-trader)
-**1.1 - Modelo de dados**
-- Adicionar campo JSON `exportPolicy` no Relationship (ou tabela 1:1).
-- Persistir sem schema rigido, com validacoes basicas.
-
-**1.2 - API de relacionamento**
-- `PUT /relationships/{src}/{dst}` aceita `export_policy`.
-- `GET /relationships/{src}/{dst}` retorna `export_policy` + assinatura.
-- Listagens de relacionamento devem incluir `export_policy` opcional.
-
-**1.3 - Validacoes**
-- `min_created_at` ISO-8601 valido.
-- `price_min <= price_max` quando ambos definidos.
-- Arrays validos para categorias e entidades.
-
-**1.4 - Telemetria**
-- Emitir evento `RELATIONSHIP_EXPORT_POLICY_UPDATED`.
-
-**1.5 - Categorias do exporter (snapshot)**
-- Criar snapshot de categorias do exporter com quantidade de ofertas ativas.
-- Endpoint CP: `GET /wls/{id}/offer-categories`.
-- Job de sync: `POST /wls/{id}/offer-categories/sync` + job periodico.
+- [ ] 1.1 Modelo de dados: adicionar `exportPolicy` no Relationship seguindo padrao atual de policy.
+- [ ] 1.2 API de relacionamento: `PUT /relationships/{src}/{dst}` aceita `export_policy`.
+- [ ] 1.3 API de relacionamento: `GET /relationships/{src}/{dst}` retorna `export_policy` + assinatura.
+- [ ] 1.4 Listagens incluem `export_policy` opcional.
+- [ ] 1.5 Assinatura: `export_policy` incluido no payload assinado; mudanca de schema exige revisao da assinatura.
+- [ ] 1.6 Compatibilidade: clientes antigos devem ignorar campos desconhecidos.
+- [ ] 1.7 Validacao: `min_created_at` ISO-8601 com `Z`.
+- [ ] 1.8 Validacao: `price_min <= price_max` quando definidos.
+- [ ] 1.9 Validacao: arrays validos para categorias e entidades.
+- [ ] 1.10 Politica invalida => log + fallback.
+- [ ] 1.11 Telemetria: evento `RELATIONSHIP_EXPORT_POLICY_UPDATED`.
+- [ ] 1.12 Snapshot categorias: tabela + `GET /wls/{id}/offer-categories`.
+- [ ] 1.13 Snapshot categorias: `POST /wls/{id}/offer-categories/sync` + job periodico.
+- [ ] 1.14 Snapshot categorias: paginacao `limit=200`, `max=1000`, busca por nome.
+- [ ] 1.15 Snapshot entidades: tabela + `GET /wls/{id}/entities` (busca + `activeOnly`).
+- [ ] 1.16 Snapshot entidades: `POST /wls/{id}/entities/sync` + job periodico.
+- [ ] 1.17 Snapshot entidades: paginacao `limit=200`, `max=1000`, busca por nome.
+- [ ] 1.18 UI: console de problemas no modal do relacionamento.
+- [ ] 1.19 UI: avisar itens inexistentes no snapshot com sugestao (remover ou ressincronizar).
 
 ---
 
 ### 2) Exporter (xpory-core)
-**2.1 - Endpoint de categorias**
-- `GET /api/v2/control-plane/offer-categories`.
-- Retorna lista de categorias com `activeCount`.
-
-**2.2 - Aplicacao da politica no export**
-- Aplicar filtros do `export_policy` ao montar o payload de exportacao.
-- Sempre filtrar por ofertas ativas.
-- Precedencia conforme regras acima.
-- Fallback para exportacao atual se politica ausente ou `enabled=false`.
-
-**2.3 - Observabilidade**
-- Logs e metricas para quantidade de ofertas filtradas.
-- Alerta opcional quando politica resulta em 0 ofertas.
+- [ ] 2.1 Endpoint `GET /api/v2/control-plane/offer-categories` retorna `{ categoryId, name, activeCount }`.
+- [ ] 2.2 Endpoint `offer-categories` protegido por auth CP (JWT + mTLS).
+- [ ] 2.3 Endpoint `GET /api/v2/control-plane/entities` retorna `{ entityId, name, activeOffersCount, status, updatedAt }`.
+- [ ] 2.4 Endpoint `entities` suporta `updatedSince`, `activeOnly`, `name`.
+- [ ] 2.5 Endpoint `entities` com paginacao `limit=200`, `max=1000`.
+- [ ] 2.6 Endpoint `entities` protegido por auth CP (JWT + mTLS).
+- [ ] 2.7 Enforcement: aplicar `export_policy` ao export (sempre ofertas ativas).
+- [ ] 2.8 Enforcement: precedencia conforme regras do contrato.
+- [ ] 2.9 Enforcement: `include_domestic` e `include_under_budget` vindos do dominio da oferta.
+- [ ] 2.10 Fallback: politica ausente/`enabled=false`/invalida => log + fallback.
+- [ ] 2.11 Sync incremental: usar `updatedSince` se `updatedAt` confiavel.
+- [ ] 2.12 Sync incremental: se `updatedAt` nao confiavel, responder full sync com log.
+- [ ] 2.13 Observabilidade: logs/metricas de ofertas filtradas.
+- [ ] 2.14 Observabilidade: alerta opcional para politica resultando em 0 ofertas.
 
 ---
 
 ### 3) UI / Admin (Control Plane)
-**3.1 - Configuracao da politica**
-- Campos para categoria, faixa de preco, data minima, flags booleanas.
-- Allowlist/blocklist de entidades (chips + autocomplete).
-
-**3.2 - Visibilidade de impacto (opcional)**
-- Mostrar total de ofertas ativas vs elegiveis pela politica.
+- [ ] 3.1 Formulario: categorias, faixa de preco, data minima, flags booleanas.
+- [ ] 3.2 Formulario: allowlist/blocklist de entidades com autocomplete via CP.
+- [ ] 3.3 (Opcional) Impacto: exibir ativas vs elegiveis pela politica.
 
 ## Checklist de migracao e validacao
-
-**Migracao**
-- Adicionar coluna JSON `export_policy` (ou tabela auxiliar).
-- Default `null` (politica ausente).
-
-**Validacoes CP**
-- Schema basico valido (tipos e faixas).
-- `min_created_at` parseavel.
-
-**Validacoes Exporter**
-- Politica invalida => log + fallback.
-- Garantir filtro por ofertas ativas.
-
-**Testes**
-- CP: update/fetch com assinatura e validacoes.
-- Exporter: filtros por categoria/preco/data/entidade e precedencia.
-- Fallback: politica ausente ou `enabled=false`.
+- [ ] Migracao: adicionar `export_policy` seguindo padrao atual de policy.
+- [ ] Migracao: default `null`.
+- [ ] Validacao CP: `min_created_at` parseavel, com `Z` e UTC.
+- [ ] Validacao CP: tipos e faixas basicas.
+- [ ] Validacao Exporter: politica invalida => log + fallback.
+- [ ] Validacao Exporter: garantir filtro por ofertas ativas.
+- [ ] Testes CP: update/fetch com assinatura e validacoes.
+- [ ] Testes Exporter: filtros por categoria/preco/data/entidade e precedencia.
+- [ ] Testes Exporter: fallback para politica ausente/`enabled=false`/invalida.
 
 ## Rollout
-- Deploy CP com schema + APIs.
-- Deploy exporter com enforcement atras de feature flag.
-- Habilitar por relacionamento gradualmente.
+- [ ] Deploy CP com schema + APIs.
+- [ ] Deploy exporter com enforcement atras de feature flag.
+- [ ] Habilitar por relacionamento gradualmente.

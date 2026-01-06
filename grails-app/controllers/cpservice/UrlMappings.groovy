@@ -19,6 +19,10 @@ class UrlMappings {
         "/wls/$id/trader/sync"(controller: 'traderAccount', action: 'sync', method: 'POST')
         "/wls/$id/peer-token"(controller: 'whiteLabel', action: 'peerToken', method: 'POST')
         "/wls/$id/token"(controller: 'whiteLabel', action: 'token', method: 'POST')
+        "/wls/$id/offer-categories"(controller: 'exportMetadata', action: 'categories', method: 'GET')
+        "/wls/$id/offer-categories/sync"(controller: 'exportMetadata', action: 'syncCategories', method: 'POST')
+        "/wls/$id/entities"(controller: 'exportMetadata', action: 'entities', method: 'GET')
+        "/wls/$id/entities/sync"(controller: 'exportMetadata', action: 'syncEntities', method: 'POST')
         "/relationships"(controller: 'relationship', action: 'index', method: 'GET')
         "/wls/$id/relationships"(controller: 'relationship', action: 'index', method: 'GET')
         "/relationships/$src/$dst"(controller: 'relationship') {

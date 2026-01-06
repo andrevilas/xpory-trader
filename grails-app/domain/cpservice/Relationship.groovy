@@ -1,5 +1,7 @@
 package cpservice
 
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
@@ -16,9 +18,12 @@ class Relationship {
     String notes
     String updatedBy
     String updatedSource
+    String exportPolicyJson
 
     Date dateCreated
     Date lastUpdated
+
+    static transients = ['exportPolicy']
 
     static mapping = {
         table 'cp_relationships'
@@ -27,6 +32,7 @@ class Relationship {
         limitAmount scale: 2, precision: 18
         sourceId index: 'idx_cp_relationship_src'
         targetId index: 'idx_cp_relationship_dst'
+        exportPolicyJson column: 'export_policy', type: 'text'
     }
 
     static constraints = {
@@ -38,10 +44,34 @@ class Relationship {
         notes nullable: true, maxSize: 500
         updatedBy nullable: true, maxSize: 120
         updatedSource nullable: true, maxSize: 120
+        exportPolicyJson nullable: true
         targetId unique: 'sourceId', validator: { val, obj ->
             if (val == obj.sourceId) {
                 return 'relationship.sameParty'
             }
         }
+    }
+
+    Map getExportPolicy() {
+        if (!exportPolicyJson) {
+            return null
+        }
+        def parsed = new JsonSlurper().parseText(exportPolicyJson)
+        if (parsed instanceof Map) {
+            return parsed as Map
+        }
+        return null
+    }
+
+    void setExportPolicy(Object value) {
+        if (value == null) {
+            exportPolicyJson = null
+            return
+        }
+        if (value instanceof CharSequence) {
+            exportPolicyJson = value.toString()
+            return
+        }
+        exportPolicyJson = JsonOutput.toJson(value)
     }
 }

@@ -77,6 +77,7 @@ class RelationshipController {
         String src = params.src
         String dst = params.dst
         Map payload = request.JSON as Map ?: [:]
+        boolean hasExportPolicy = payload.containsKey('exportPolicy') || payload.containsKey('export_policy')
         if (!payload.updatedBy) {
             payload.updatedBy = request.getHeader('X-Client-Id') ?: request.getHeader('X-Admin-Id')
         }
@@ -88,6 +89,9 @@ class RelationshipController {
             Map body = toJson(relationship)
             Map signature = governanceSigningService.signPayload(body)
             body.signature = signature
+            if (hasExportPolicy) {
+                governanceTelemetryService.recordRelationshipExportPolicyUpdated(relationship.sourceId, relationship.targetId)
+            }
             render status: HttpStatus.OK.value(), contentType: "application/json", text: (body as JSON)
         } catch (IllegalArgumentException ex) {
             render status: HttpStatus.BAD_REQUEST.value(), contentType: "application/json", text: ([error: ex.message] as JSON)
@@ -100,6 +104,7 @@ class RelationshipController {
     }
 
     private Map toJson(Relationship relationship) {
+        Map exportPolicy = relationship.exportPolicy
         [
                 id                  : relationship.id,
                 sourceId            : relationship.sourceId,
@@ -112,6 +117,8 @@ class RelationshipController {
                 imbalance_limit     : relationship.limitAmount,
                 status              : relationship.status?.toLowerCase(),
                 notes               : relationship.notes,
+                exportPolicy         : exportPolicy,
+                export_policy        : exportPolicy,
                 updatedBy           : relationship.updatedBy,
                 updatedSource       : relationship.updatedSource,
                 updatedAt           : relationship.lastUpdated,

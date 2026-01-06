@@ -16,6 +16,11 @@ class GovernanceTelemetryService {
         recordEvent(sourceWhiteLabelId, 'RELATIONSHIP_PACKAGE_SENT', payload)
     }
 
+    TelemetryEvent recordRelationshipExportPolicyUpdated(String sourceWhiteLabelId, String targetWhiteLabelId) {
+        Map payload = [targetId: targetWhiteLabelId]
+        recordEvent(sourceWhiteLabelId, 'RELATIONSHIP_EXPORT_POLICY_UPDATED', payload)
+    }
+
     TelemetryEvent recordPeerTokenIssued(String importerId, Map details = [:]) {
         recordEvent(importerId, 'PEER_TOKEN_ISSUED', details)
     }

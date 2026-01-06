@@ -1,6 +1,6 @@
 # Runbook: Reset completo CP + WLs e validacao de trades
 
-Data base: 2026-01-04 (BRT)
+Data base: 2026-01-06 (BRT)
 
 ## Objetivo
 Resetar o ambiente local (CP + WLs), recriar WLs/politicas/relacionamentos via API, sincronizar ofertas e gerar ~20 trades com statuses mistos (PENDING/CONFIRMED/REJECTED), validando detalhes via Admin UI/Playwright.
@@ -168,10 +168,80 @@ curl -s https://cp.localhost/admin/api/trades/<TRADE_ID>/details \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-## 8) Validar UI via Playwright
-- Login em https://cp.localhost/admin/
-- Acessar /admin/trades
-- Abrir modal de detalhes (deve trazer oferta e comprador/vendedor, sem '-').
+## 8) Validar preflight (hold curto)
+Objetivo: garantir que o preflight bloqueia compras impossiveis **antes** do pagamento.
+
+### 8.0) Usuario QA (wl-03)
+- login: qa.preflight@xpory.local
+- account_id: 90805
+- entity_id: 90803
+- token: qa-preflight-token
+- saldo X$ e R$: 5000
+
+### 8.1) Preflight rejeitado por PRICE_CHANGED
+1. No exporter (wl-01), altere o preco da oferta originaria apos a sincronizacao.
+2. No importer (wl-03), execute o `/api/v1/buy-offer` da oferta importada.
+3. Esperado:
+   - Resposta `ok=false`, `status=REJECTED`, `msg` indicando atualizacao de preco.
+   - Nenhuma comissao cobrada (sem estorno necessario).
+
+### 8.2) Preflight rejeitado por OUT_OF_STOCK
+1. No exporter, zere o estoque da oferta originaria.
+2. No importer, repita o `/api/v1/buy-offer`.
+3. Esperado:
+   - Resposta `ok=false`, `status=REJECTED`, `msg` de oferta esgotada.
+
+### 8.3) Hold expirado (HOLD_EXPIRED)
+1. No exporter, criar hold via `/api/v2/trader/purchase/preflight` (Authorization: Bearer peer-token).
+2. Aguardar TTL (90s).
+3. No importer, chamar `/api/v2/checkout/imported-offer/{importedOfferId}` com `Idempotency-Key` e `holdId`.
+4. Esperado:
+   - Resposta `status=REJECTED`, `reason=HOLD_EXPIRED`, `unitPrice` preenchido.
+
+## 9) Validar UI via Playwright
+- Garantir /etc/hosts com `xpory.localhost` apontando para 127.0.0.1.
+- Usar a conta QA do item 8.0.
+
+### 9.1) PRICE_CHANGED (UI)
+```bash
+PW_BASE_URL=http://xpory.localhost \
+PW_ACCOUNT_ID=90805 \
+PW_TOKEN=qa-preflight-token \
+PW_OFFER_ID=80204 \
+npx playwright test playwright/tests/preflight.price-changed.spec.ts
+```
+- Esperado: modal "O preco desta oferta foi atualizado. Atualize a pagina e tente novamente." + botao para recarregar.
+
+### 9.2) OUT_OF_STOCK (UI)
+- Preparar estoque zerado no exporter para a oferta originaria correspondente.
+- Rodar o fluxo de compra no front (mesma oferta importada).
+- Esperado: alerta "Oferta esgotada."
+
+### 9.3) HOLD_EXPIRED (API)
+Observacao: o fluxo UI dispara preflight + checkout no mesmo request, entao nao e viavel esperar o TTL pela UI.
+Use o spec API:
+
+```bash
+PW_BASE_URL=http://xpory.localhost \
+PW_IMPORTER_BASE_URL=http://localhost:8090 \
+PW_EXPORTER_BASE_URL=http://localhost:8081 \
+PW_CP_PEER_TOKEN=<peer-token> \
+PW_REQUESTER_WL_ID=ee02f592-4b26-476c-8c68-404742c518b1 \
+PW_REQUESTER_TRADER_ID=<trader-id> \
+PW_ORIGIN_OFFER_ID=<origin-offer-id> \
+PW_IMPORTED_OFFER_ID=<imported-offer-id> \
+PW_EXPECTED_UNIT_PRICE=<preco> \
+PW_HOLD_TTL_SECONDS=90 \
+PW_CLIENT_BUYER_MASKED=qa***@xpory.local \
+PW_QUANTITY=1 \
+npx playwright test -c playwright/playwright.config.ts playwright/tests/preflight.hold-expired.api.spec.ts
+```
+- Esperado: `status=REJECTED`, `reason=HOLD_EXPIRED`.
+
+- Validacoes CP:
+  - Login em https://cp.localhost/admin/
+  - Acessar /admin/trades
+  - Abrir modal de detalhes (deve trazer oferta e comprador/vendedor, sem '-').
 
 ## Observacoes
 - Caso as compras falhem com "Erro ao debitar em X$", verificar se a tabela `xtransaction_maturity` foi zerada indevidamente. Nesse caso, reestabelecer dados de maturidade (via processo de seeding/app) antes de repetir as compras.

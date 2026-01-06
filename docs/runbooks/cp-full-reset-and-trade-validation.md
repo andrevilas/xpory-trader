@@ -86,7 +86,48 @@ curl -sk -X POST https://cp.localhost/admin/api/wls/d649e009-da37-4593-84b2-3cd5
   -d '{"name":"Conta Trader Importer","status":"active","contactEmail":"importer@example.com","contactPhone":"+55 11 90000-0002"}'
 ```
 
-## 4) Gerar peer token (mTLS) e sincronizar ofertas
+## 4) Sincronizar snapshots de categorias/entidades (CP)
+```bash
+# categorias do exporter
+curl -sk -X POST "https://cp.localhost/admin/api/wls/bf695d35-6b28-42b6-8bc7-772385a05e5a/offer-categories/sync" \
+  -H "Authorization: Bearer $TOKEN"
+
+# entidades do exporter
+curl -sk -X POST "https://cp.localhost/admin/api/wls/bf695d35-6b28-42b6-8bc7-772385a05e5a/entities/sync" \
+  -H "Authorization: Bearer $TOKEN"
+
+# listar categorias e entidades para escolher ids
+curl -sk "https://cp.localhost/admin/api/wls/bf695d35-6b28-42b6-8bc7-772385a05e5a/offer-categories?limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sk "https://cp.localhost/admin/api/wls/bf695d35-6b28-42b6-8bc7-772385a05e5a/entities?limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## 5) Definir export_policy no relacionamento exporter -> importer
+```bash
+curl -sk -X PUT "https://cp.localhost/admin/api/relationships/bf695d35-6b28-42b6-8bc7-772385a05e5a/d649e009-da37-4593-84b2-3cd50800f325" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{
+    "status":"active",
+    "fxRate":1,
+    "limitAmount":100000,
+    "export_policy":{
+      "enabled":true,
+      "min_created_at":"2026-01-01T00:00:00Z",
+      "include_categories":["<CATEGORY_ID>"],
+      "exclude_categories":[],
+      "entity_allowlist":["<ENTITY_ID>"],
+      "entity_blocklist":[],
+      "include_domestic":true,
+      "include_under_budget":true
+    },
+    "updatedBy":"bootstrap",
+    "updatedSource":"runbook"
+  }'
+```
+
+## 6) Gerar peer token (mTLS) e sincronizar ofertas
 ```bash
 curl -s -o /tmp/peer-token.json -w "%{http_code}" \
   --resolve cp.localhost:443:127.0.0.1 \
@@ -242,6 +283,13 @@ npx playwright test -c playwright/playwright.config.ts playwright/tests/prefligh
   - Login em https://cp.localhost/admin/
   - Acessar /admin/trades
   - Abrir modal de detalhes (deve trazer oferta e comprador/vendedor, sem '-').
+
+## Runbooks de cenarios de export_policy
+- `export-policy-scenario-no-exportable.md`
+- `export-policy-scenario-single-category.md`
+- `export-policy-scenario-exclude-category.md`
+- `export-policy-scenario-entity-allowlist.md`
+- `export-policy-scenario-entity-blocklist.md`
 
 ## Observacoes
 - Caso as compras falhem com "Erro ao debitar em X$", verificar se a tabela `xtransaction_maturity` foi zerada indevidamente. Nesse caso, reestabelecer dados de maturidade (via processo de seeding/app) antes de repetir as compras.

@@ -9,4 +9,5 @@ databaseChangeLog = {
     include file: '20260105-notifications.groovy', relativeToChangelogFile: true
     include file: '20260105-notification-version.groovy', relativeToChangelogFile: true
     include file: '20260106-relationship-export-policy-and-snapshots.groovy', relativeToChangelogFile: true
+    include file: '20260106-relationship-export-policy-version-columns.groovy', relativeToChangelogFile: true
 }

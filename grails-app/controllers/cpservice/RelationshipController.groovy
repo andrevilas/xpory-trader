@@ -20,8 +20,18 @@ class RelationshipController {
         String targetId = params.targetId ?: params.dst ?: params.id ?: params.wlId
         String status = params.status
         boolean includeSignature = params.boolean('signed') || params.boolean('includeSignature')
+        boolean includeOrphans = params.boolean('includeOrphans')
+        List<String> whiteLabelIds = includeOrphans ? [] : WhiteLabel.list().collect { it.id }
 
         List<Relationship> relationships = Relationship.createCriteria().list(max: limit, offset: offset) {
+            if (!includeOrphans) {
+                if (!whiteLabelIds) {
+                    eq('id', '___no_rows___')
+                } else {
+                    inList('sourceId', whiteLabelIds)
+                    inList('targetId', whiteLabelIds)
+                }
+            }
             if (sourceId) {
                 eq('sourceId', sourceId)
             }
@@ -35,6 +45,14 @@ class RelationshipController {
         }
 
         Number total = Relationship.createCriteria().count {
+            if (!includeOrphans) {
+                if (!whiteLabelIds) {
+                    eq('id', '___no_rows___')
+                } else {
+                    inList('sourceId', whiteLabelIds)
+                    inList('targetId', whiteLabelIds)
+                }
+            }
             if (sourceId) {
                 eq('sourceId', sourceId)
             }

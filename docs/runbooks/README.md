@@ -15,9 +15,17 @@ Este diretorio organiza runbooks por fluxo principal e cenarios de validacao.
 
 4) **Validacoes end-to-end (balanca comercial)**
    - [commercial-balance-env-setup.md](commercial-balance-env-setup.md)
+   - [commercial-balance-ui.md](commercial-balance-ui.md)
 
 5) **Notificacoes (CP + Admin UI)**
    - [notifications.md](notifications.md)
+   - [notifications-ui.md](notifications-ui.md)
+
+6) **Relacionamentos (criar/editar)**
+   - [relationships-create-edit-ui.md](relationships-create-edit-ui.md)
+
+7) **Aprovacoes de trade (UI)**
+   - [trades-approval-ui.md](trades-approval-ui.md)
 
 ## Cenarios de export_policy
 

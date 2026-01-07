@@ -86,6 +86,8 @@ cd /home/andre/Trabalho/XporY/repos/xpory-core
 
 2. Validar conexao ao CP e sincronizacao inicial.
 3. Garantir que os gateways/rotas estao acessiveis pelo CP (ex.: `host.docker.internal`).
+4. No importer, garantir `APP_CP_EXPORTERS_JSON_OVERRIDE` usando o exporter com `?importerWlId=<IMPORTER_WL_ID>`:
+   - Ex.: `[{\"id\":\"<EXPORTER_WL_ID>\",\"name\":\"wl-exporter\",\"baseUrl\":\"http://localhost:8081\",\"path\":\"/api/v2/control-plane/export/offers?importerWlId=<IMPORTER_WL_ID>\"}]`
 
 ### 4) Subir Admin UI
 1. A UI sobe junto com o `docker compose` do CP (build local).
@@ -106,6 +108,10 @@ cd /home/andre/Trabalho/XporY/repos/xpory-core
 - CP nao sobe: validar conexao do banco e variaveis `SERVER_SSL_*` no `docker-compose.yml`.
 - Admin UI sem API: validar `VITE_CP_BASE_URL` e proxy reverso (Traefik).
 - WLs sem sync: validar URLs e tokens de integracao com CP.
+
+## Validado em 2026-01-07
+- CP + WLs + Admin UI sobem e autenticam via Traefik/mTLS.
+- Rotas principais e sincronizacao inicial funcionam.
 
 ## Observacoes
 - Este staging e local e usa mTLS via Traefik.

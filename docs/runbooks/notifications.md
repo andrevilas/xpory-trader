@@ -61,6 +61,10 @@ Payload esperado:
 - Contador de nao lidas atualiza apos marcar como lida.
 - Filtros de audiencia respeitam roles.
 
+## Validado em 2026-01-07
+- Lista de notificacoes carrega e contador de nao lidas atualiza.
+- Clique na notificacao navega para o fluxo relacionado.
+
 ## Observacoes
 - `LIMIT_*` considera soma de trades CONFIRMED + PENDING.
 - Mensagem inclui `origin -> target | total / limite` quando aplicavel.

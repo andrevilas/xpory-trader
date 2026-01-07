@@ -46,10 +46,11 @@ Documentar como subir o ambiente end-to-end para validar a balanca comercial (ba
 ## Validacao
 
 ### API / Relatorios (CP)
-- Confirmar que o endpoint `/reports/trade-balance` responde com:
-  - Pairs bidirecionais (wlAId, wlBId)
-  - Totais consolidados (totalExported, totalImported, balance)
-  - Direcoes (aToB/bToA) e availability flags
+- Endpoint validado: `https://cp.localhost/admin/api/reports/trade-balance`
+- Confirmar que o payload inclui:
+  - `relationships[]` com `sourceId`, `targetId`, `fxRate`, `limitAmount`, `status`
+  - `tradeMetrics.counts` e `tradeMetrics.totals` (CONFIRMED/PENDING/REJECTED)
+  - `totals.tradeStatusTotals` consolidado
 
 ### Telemetria (WL -> CP)
 - Confirmar que eventos `TRADER_PURCHASE` contem:
@@ -61,6 +62,10 @@ Documentar como subir o ambiente end-to-end para validar a balanca comercial (ba
 - Ao selecionar WL origem, a lista de WL destino deve mostrar apenas pares reciprocos.
 - O grafico de barras (timeline) deve refletir saldo positivo/negativo por periodo.
 - Totais de exportacao/importacao devem bater com o CP.
+
+## Validacao (staging local - 2026-01-06)
+- `/admin/api/reports/trade-balance` retornou `relationships=4`.
+- `tradeMetrics.counts` refletiu trades confirmados, pendentes e rejeitados gerados no reset.
 
 ## Problemas encontrados e resolucoes
 
@@ -95,6 +100,10 @@ Documentar como subir o ambiente end-to-end para validar a balanca comercial (ba
 
 **Solucao aplicada:**
 - Nenhuma; warnings informativos.
+
+## Validado em 2026-01-07
+- Ambiente subiu com CP + WLs + Admin UI.
+- Trade-balance e telas relacionadas carregaram dados apos reset.
 
 ## Observacoes
 - Para validacao manual, utilizar o Admin UI e verificar:

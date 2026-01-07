@@ -19,6 +19,8 @@ class ReportService {
         limit = Math.min(limit, 200)
         String statusFilter = status ? status.toLowerCase() : null
         boolean pairFilter = wlExporter && wlImporter
+        boolean includeOrphans = params?.includeOrphans?.toString()?.toBoolean()
+        List<String> whiteLabelIds = includeOrphans ? [] : WhiteLabel.list().collect { it.id }
         Closure criteriaFilters = {
             if (wlId) {
                 or {
@@ -56,9 +58,20 @@ class ReportService {
             order('lastUpdated', 'desc')
         }
         relationshipsForTotals = relationshipsForTotals.findAll { Relationship rel ->
-            isUuid(rel.sourceId) && isUuid(rel.targetId)
+            isUuid(rel.sourceId) && isUuid(rel.targetId) &&
+                    (includeOrphans || (whiteLabelIds.contains(rel.sourceId) && whiteLabelIds.contains(rel.targetId)))
         }
         Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter, pairFilter)
+        if (!includeOrphans) {
+            if (whiteLabelIds) {
+                tradeStatsByPair = tradeStatsByPair.findAll { String key, Map value ->
+                    List<String> parts = key?.split('::', 2) as List<String>
+                    parts?.size() == 2 && whiteLabelIds.contains(parts[0]) && whiteLabelIds.contains(parts[1])
+                }
+            } else {
+                tradeStatsByPair = [:]
+            }
+        }
         Map<String, Map> pairs = buildPairEntries(relationshipsForTotals)
         pairs.values().each { Map entry ->
             String wlAId = entry.wlAId?.toString()

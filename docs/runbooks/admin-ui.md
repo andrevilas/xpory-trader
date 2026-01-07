@@ -70,6 +70,7 @@ https://cp.localhost/admin/
 - UI carregando mas API falhando: confirme o CP esta respondendo em `https://host.docker.internal:8080` com mTLS.
 - Erro TLS no CP: confirme `SERVER_SSL_*` no `docker-compose.yml` e a senha `changeit` nos keystores.
 - Erro 404 em assets: confirme que a UI foi buildada com `VITE_BASE_PATH=/admin/`.
+- Banner "Invalid token" nas telas: sair e autenticar novamente (JWT expirado/antigo).
 
 ## Parar o stack
 ```
@@ -77,6 +78,10 @@ docker compose -f docker-compose.proxy.yml down
 
 docker compose down
 ```
+
+## Validado em 2026-01-07
+- Admin UI acessa e autentica via mTLS + JWT.
+- Navegacao e chamadas `/admin/api` respondem sem erros.
 
 ## Relacionados
 - `staging-environment-setup.md`

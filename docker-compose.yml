@@ -24,6 +24,7 @@ services:
       DB_NAME: ${DB_NAME:-xpory_cp}
       DB_USERNAME: ${DB_USERNAME:-xpory_cp}
       DB_PASSWORD: ${DB_PASSWORD:-supersecret}
+      SERVER_PORT: ${SERVER_PORT:-8080}
       SERVER_SSL_ENABLED: "true"
       SERVER_SSL_KEY_STORE: /tls/server/server.p12
       SERVER_SSL_KEY_STORE_PASSWORD: ${SERVER_SSL_KEY_STORE_PASSWORD:-changeit}

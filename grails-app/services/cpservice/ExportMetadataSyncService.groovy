@@ -29,7 +29,9 @@ class ExportMetadataSyncService {
     }
 
     Map syncAll() {
-        List<WhiteLabel> targets = WhiteLabel.findAllByStatus('active')
+        List<WhiteLabel> targets = WhiteLabel.withNewSession {
+            WhiteLabel.findAllByStatus('active') ?: []
+        }
         Map<String, Object> summary = [ok: true, total: targets?.size() ?: 0, categories: 0, entities: 0]
         targets.each { WhiteLabel wl ->
             if (!wl?.gatewayUrl) {

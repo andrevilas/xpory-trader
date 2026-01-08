@@ -98,7 +98,10 @@ class TradeApprovalService {
         }
 
         // remove trades already decided
-        Set<String> decidedTradeIds = TradeApproval.findAllByTradeIdInList(items.collect { it.tradeId })*.tradeId as Set
+        Set<String> decidedTradeIds = [] as Set
+        if (items) {
+            decidedTradeIds = TradeApproval.findAllByTradeIdInList(items.collect { it.tradeId })*.tradeId as Set
+        }
         List<Map> filtered = items.findAll { !decidedTradeIds.contains(it.tradeId) }
         Map<String, String> wlNames = resolveWhiteLabelNames(filtered)
         filtered.each { Map item ->

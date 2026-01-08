@@ -129,12 +129,17 @@ environments:
     production:
         dataSource:
             dbCreate: none
+            url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory-cp}}
+            driverClassName: org.postgresql.Driver
+            dialect: org.hibernate.dialect.PostgreSQL95Dialect
+            username: ${DB_USERNAME:postgres}
+            password: ${DB_PASSWORD:postgres}
             properties:
                 maxAge: 600000
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
 
 server:
-    port: 8080
+    port: ${SERVER_PORT:18081}
     ssl:
         enabled: ${SERVER_SSL_ENABLED:false}
         key-store: ${SERVER_SSL_KEY_STORE:}
@@ -198,5 +203,7 @@ logging:
 grails:
     plugin:
         databasemigration:
+            changelogLocation: ${user.dir}/src/main/resources/migrations
+            changelogFileName: changelog.groovy
             updateOnStart: ${DB_MIGRATION_UPDATE_ON_START:true}
             updateOnStartFileName: migrations/changelog.groovy

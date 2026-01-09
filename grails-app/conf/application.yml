@@ -115,18 +115,30 @@ dataSource:
 
 environments:
     development:
+        app:
+            cors:
+                enabled: ${APP_CORS_ENABLED_DEV:${APP_CORS_ENABLED:true}}
+                allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS_DEV:${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}}
         dataSource:
             dbCreate: none
             url: ${DEV_DB_URL:jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE}
             driverClassName: org.h2.Driver
             dialect: org.hibernate.dialect.H2Dialect
     test:
+        app:
+            cors:
+                enabled: ${APP_CORS_ENABLED_TEST:${APP_CORS_ENABLED:true}}
+                allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS_TEST:${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}}
         dataSource:
             dbCreate: none
             url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             driverClassName: org.h2.Driver
             dialect: org.hibernate.dialect.H2Dialect
     production:
+        app:
+            cors:
+                enabled: ${APP_CORS_ENABLED_PROD:${APP_CORS_ENABLED:true}}
+                allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS_PROD:${APP_CORS_ALLOWED_ORIGINS:https://cp-admin.xpory.com.br}}
         dataSource:
             dbCreate: none
             url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xpory-cp}}
@@ -192,6 +204,9 @@ imbalance:
         readTimeoutMillis: ${IMBALANCE_DISPATCH_READ_TIMEOUT:15000}
 
 app:
+    cors:
+        enabled: ${APP_CORS_ENABLED:true}
+        allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS:https://cp-admin.xpory.com.br}
     policy:
         cacheTtlSeconds: ${POLICY_CACHE_TTL_SECONDS:300}
 

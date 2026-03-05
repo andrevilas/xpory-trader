@@ -12,10 +12,12 @@ class NotificationService {
     static final String TYPE_TRADE_PENDING = 'TRADE_PENDING'
     static final String TYPE_LIMIT_WARNING = 'LIMIT_WARNING'
     static final String TYPE_LIMIT_REACHED = 'LIMIT_REACHED'
+    static final String TYPE_TRADE_RECONCILIATION_DIVERGENCE = 'TRADE_RECONCILIATION_DIVERGENCE'
 
     static final String ACTION_OPEN_TRADES = 'OPEN_TRADES'
     static final String ACTION_OPEN_PENDING_TRADES = 'OPEN_PENDING_TRADES'
     static final String ACTION_OPEN_RELATIONSHIP = 'OPEN_RELATIONSHIP'
+    static final String ACTION_OPEN_TRADE_BALANCE = 'OPEN_TRADE_BALANCE'
 
     NotificationSocketService notificationSocketService
 
@@ -99,6 +101,44 @@ class NotificationService {
                 'select count(nr.id) from NotificationRecipient nr where nr.user.id = :userId and nr.readAt is null',
                 [userId: userId]
         )[0] as Long
+    }
+
+    void createTradeReconciliationAlert(Map reconciliation) {
+        if (!reconciliation) {
+            return
+        }
+        String key = reconciliation.reconciliationKey?.toString()
+        if (!key) {
+            return
+        }
+        if (notificationExistsForTrade(TYPE_TRADE_RECONCILIATION_DIVERGENCE, key)) {
+            return
+        }
+        List<AdminUser> recipients = listUsersByRoles([AdminUser.ROLE_MASTER, AdminUser.ROLE_MANAGER])
+        if (!recipients) {
+            return
+        }
+
+        String message = "Divergencia na reconciliacao de trades. " +
+                "Janela: ${reconciliation.from} .. ${reconciliation.to}; " +
+                "Diff valor: ${formatAmount(reconciliation.amountDiffAbs as BigDecimal)}; " +
+                "Diff ratio: ${(reconciliation.amountDiffRatio ?: 0)}; " +
+                "Diff count: ${reconciliation.countDiffAbs ?: 0}"
+
+        Notification notification = new Notification(
+                type: TYPE_TRADE_RECONCILIATION_DIVERGENCE,
+                title: 'Alerta de reconciliacao de trades',
+                message: message,
+                actionType: ACTION_OPEN_TRADE_BALANCE,
+                actionPayload: toJson([
+                        from: reconciliation.from,
+                        to: reconciliation.to,
+                        reportVersion: 'v2'
+                ]),
+                tradeId: key
+        )
+        notification.save(flush: true, failOnError: true)
+        dispatch(notification, recipients)
     }
 
     private void createTradeNotification(String type, String title, String message, String actionType, Map actionPayload,

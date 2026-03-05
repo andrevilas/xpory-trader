@@ -1,6 +1,6 @@
 # Work Plan — Sprint Trader (Control Plane)
 
-Última atualização: 2025-12-27
+Última atualização: 2026-03-05
 
 Este plano resume o estado atual do Control Plane (CP) e o roadmap de
 alinhamento para cumprir o contrato documentado da sprint trader.
@@ -52,6 +52,10 @@ Legenda de status:
 - [x] Enriquecer o relatório `/reports/trade-balance` usando telemetria/ledger real
   (fonte: eventos `TRADER_PURCHASE` emitidos pelo WL; hoje usa apenas limites de relacionamento).
 - [x] Criar métricas para taxa de PENDING/REJECTED/CONFIRMED (CP-side).
+- [x] Garantir idempotência de ingestão (`idempotencyKey` + dedupe determinístico).
+- [x] Introduzir projeção de trade (`cp_trades`) para leitura estável e consolidada.
+- [x] Expor modo de relatório `v2` por parâmetro com fallback para telemetria.
+- [x] Implementar reconciliação periódica projeção x telemetria com alerta de divergência.
 
 ### Fase D — Governança e auditoria
 - [x] Registrar `updatedBy`/`source` em atualizações de políticas, relações e sinais.

@@ -8,7 +8,7 @@ import spock.lang.Specification
 class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportService>, DataTest {
 
     def setup() {
-        mockDomains Relationship, TelemetryEvent, WhiteLabel
+        mockDomains Relationship, TelemetryEvent, WhiteLabel, TradeProjection
     }
 
     void "tradeBalanceSummary aggregates settled totals and applies filters"() {
@@ -122,5 +122,104 @@ class ReportServiceSpec extends Specification implements ServiceUnitTest<ReportS
         pair.totals.totalExported == 30G
         pair.totals.totalImported == 20G
         pair.totals.balance == 10G
+    }
+
+    void "tradeBalanceSummary keeps telemetry as default (v1) even when projection exists"() {
+        given:
+        String wlAId = 'aaaaaaaa-3333-3333-3333-333333333333'
+        String wlBId = 'bbbbbbbb-4444-4444-4444-444444444444'
+        new Relationship(sourceId: wlAId, targetId: wlBId, limitAmount: 100G).save(validate: false, flush: true)
+        Date now = new Date()
+
+        new TelemetryEvent(
+                whiteLabelId: wlBId,
+                nodeId: wlBId,
+                eventType: 'TRADER_PURCHASE',
+                payload: JsonOutput.toJson([
+                        originWhiteLabelId: wlAId,
+                        targetWhiteLabelId: wlBId,
+                        status            : 'CONFIRMED',
+                        unitPrice         : 10.00,
+                        confirmedQuantity : 2,
+                        eventName         : 'TRADE_SETTLED',
+                        settlementStatus  : 'SETTLED'
+                ]),
+                eventTimestamp: now
+        ).save(validate: false, flush: true)
+
+        new TradeProjection(
+                tradeExternalId: 'ext-proj-1',
+                tradeId: 'trade-proj-1',
+                originWhiteLabelId: wlAId,
+                targetWhiteLabelId: wlBId,
+                status: 'CONFIRMED',
+                settlementStatus: 'SETTLED',
+                eventName: 'TRADE_SETTLED',
+                unitPrice: 7.5G,
+                confirmedQuantity: 2,
+                currency: 'X',
+                occurredAt: now,
+                lastEventTimestamp: now
+        ).save(validate: false, flush: true)
+
+        when:
+        Map summary = service.tradeBalanceSummary([wlId: wlAId, includeOrphans: true])
+
+        then:
+        summary.filters.reportVersion == 'v1'
+        summary.relationships.size() == 1
+        Map pair = summary.relationships[0]
+        pair.tradeMetrics.aToB.counts.CONFIRMED == 1
+        pair.tradeMetrics.aToB.totals.CONFIRMED == 20G
+        pair.tradeMetrics.aToB.settled.total == 20G
+    }
+
+    void "tradeBalanceSummary uses projection on v2 mode and falls back to telemetry otherwise"() {
+        given:
+        String wlAId = 'aaaaaaaa-5555-5555-5555-555555555555'
+        String wlBId = 'bbbbbbbb-6666-6666-6666-666666666666'
+        new Relationship(sourceId: wlAId, targetId: wlBId, limitAmount: 100G).save(validate: false, flush: true)
+        Date now = new Date()
+
+        new TelemetryEvent(
+                whiteLabelId: wlBId,
+                nodeId: wlBId,
+                eventType: 'TRADER_PURCHASE',
+                payload: JsonOutput.toJson([
+                        originWhiteLabelId: wlAId,
+                        targetWhiteLabelId: wlBId,
+                        status            : 'CONFIRMED',
+                        unitPrice         : 9.00,
+                        confirmedQuantity : 2,
+                        eventName         : 'TRADE_SETTLED',
+                        settlementStatus  : 'SETTLED'
+                ]),
+                eventTimestamp: now
+        ).save(validate: false, flush: true)
+
+        new TradeProjection(
+                tradeExternalId: 'ext-proj-2',
+                tradeId: 'trade-proj-2',
+                originWhiteLabelId: wlAId,
+                targetWhiteLabelId: wlBId,
+                status: 'CONFIRMED',
+                settlementStatus: 'SETTLED',
+                eventName: 'TRADE_SETTLED',
+                unitPrice: 6G,
+                confirmedQuantity: 2,
+                currency: 'X',
+                occurredAt: now,
+                lastEventTimestamp: now
+        ).save(validate: false, flush: true)
+
+        when:
+        Map summary = service.tradeBalanceSummary([wlId: wlAId, includeOrphans: true, version: 'v2'])
+
+        then:
+        summary.filters.reportVersion == 'v2'
+        summary.relationships.size() == 1
+        Map pair = summary.relationships[0]
+        pair.tradeMetrics.aToB.totals.CONFIRMED == 12G
+        pair.tradeMetrics.aToB.settled.total == 12G
     }
 }

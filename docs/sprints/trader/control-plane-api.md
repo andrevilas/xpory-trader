@@ -19,7 +19,7 @@ mTLS gateway. The table below summarises the active endpoints.
 | `/imbalance/signals` | `POST` | Record block/unblock signals emitted by risk automation. |
 | `/imbalance/signals/{id}/ack` | `POST` | Confirm asynchronous receipt of a signal by the WL, capturing ack metadata. |
 | `/telemetry/events` | `GET`, `POST` | Query or ingest telemetry events. |
-| `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting (filters: `from`, `to`, `wlId`, `wlImporter`, `wlExporter`). |
+| `/reports/trade-balance` | `GET` | Return consolidated relationship metrics for reporting (filters: `from`, `to`, `wlId`, `wlImporter`, `wlExporter`; versioning via `version=v2` or `useProjection=true`). |
 | `/.well-known/jwks.json` | `GET` | Public JWK set used to validate CP-issued JWTs. |
 
 See `docs/postman/control-plane.postman_collection.json` for sample
@@ -167,6 +167,9 @@ Optional filters:
 - `wlId` (either side of the pair)
 - `wlImporter` (target WL)
 - `wlExporter` (source WL)
+- `version=v2` (or `useProjection=true`) to read from `cp_trades` projection first, with fallback to telemetry
+
+Default behavior remains `v1` (telemetry-based) for backward compatibility.
 
 When `eventName=TRADE_SETTLED` or `settlementStatus=SETTLED`, the report also
 exposes `tradeMetrics.settled` totals per pair.

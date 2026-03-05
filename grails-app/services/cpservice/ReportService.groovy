@@ -14,6 +14,7 @@ class ReportService {
         String wlImporter = params?.wlImporter?.toString()
         String wlExporter = params?.wlExporter?.toString()
         String status = params?.status?.toString()
+        boolean useProjection = isProjectionMode(params)
         Integer limit = parseInt(params?.limit, 100)
         Integer offset = parseInt(params?.offset, 0)
         limit = Math.min(limit, 200)
@@ -61,7 +62,7 @@ class ReportService {
             isUuid(rel.sourceId) && isUuid(rel.targetId) &&
                     (includeOrphans || (whiteLabelIds.contains(rel.sourceId) && whiteLabelIds.contains(rel.targetId)))
         }
-        Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter, pairFilter)
+        Map<String, Map> tradeStatsByPair = buildTradeStats(from, to, wlId, wlImporter, wlExporter, pairFilter, useProjection)
         if (!includeOrphans) {
             if (whiteLabelIds) {
                 tradeStatsByPair = tradeStatsByPair.findAll { String key, Map value ->
@@ -121,7 +122,8 @@ class ReportService {
                         to         : to,
                         wlId       : wlId,
                         wlImporter : wlImporter,
-                        wlExporter : wlExporter
+                        wlExporter : wlExporter,
+                        reportVersion: useProjection ? 'v2' : 'v1'
                 ],
                 totals      : [
                         relationships: total,
@@ -143,7 +145,98 @@ class ReportService {
         value ==~ /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
     }
 
-    private Map<String, Map> buildTradeStats(Date from, Date to, String wlId, String wlImporter, String wlExporter, boolean pairFilter) {
+    private Map<String, Map> buildTradeStats(Date from, Date to, String wlId, String wlImporter, String wlExporter, boolean pairFilter, boolean useProjection) {
+        if (useProjection) {
+            Map<String, Map> projectionStats = buildTradeStatsFromProjection(from, to, wlId, wlImporter, wlExporter, pairFilter)
+            if (!projectionStats.isEmpty()) {
+                return projectionStats
+            }
+        }
+        return buildTradeStatsFromTelemetry(from, to, wlId, wlImporter, wlExporter, pairFilter)
+    }
+
+    private boolean isProjectionMode(Map params) {
+        String version = params?.version?.toString()?.toLowerCase()
+        String reportVersion = params?.reportVersion?.toString()?.toLowerCase()
+        String mode = params?.mode?.toString()?.toLowerCase()
+        boolean explicitProjection = params?.useProjection in [true, 'true']
+        return explicitProjection || version in ['2', 'v2'] || reportVersion in ['2', 'v2'] || mode == 'projection'
+    }
+
+    private Map<String, Map> buildTradeStatsFromProjection(Date from, Date to, String wlId, String wlImporter, String wlExporter, boolean pairFilter) {
+        List<TradeProjection> projections = TradeProjection.list()
+        Map<String, Map> stats = [:]
+        projections.each { TradeProjection trade ->
+            Date referenceTs = trade.occurredAt ?: trade.lastEventTimestamp ?: trade.dateCreated
+            if (from && referenceTs && referenceTs.before(from)) {
+                return
+            }
+            if (to && referenceTs && referenceTs.after(to)) {
+                return
+            }
+            String sourceId = trade.originWhiteLabelId?.toString()
+            String targetId = trade.targetWhiteLabelId?.toString()
+            if (!sourceId || !targetId) {
+                return
+            }
+            if (wlId && !(wlId == sourceId || wlId == targetId)) {
+                return
+            }
+            if (pairFilter) {
+                boolean matchesPair = (wlExporter == sourceId && wlImporter == targetId) ||
+                        (wlExporter == targetId && wlImporter == sourceId)
+                if (!matchesPair) {
+                    return
+                }
+            } else {
+                if (wlExporter && wlExporter != sourceId) {
+                    return
+                }
+                if (wlImporter && wlImporter != targetId) {
+                    return
+                }
+            }
+
+            String status = trade.status?.toString()?.toUpperCase() ?: 'UNKNOWN'
+            BigDecimal unitPrice = trade.unitPrice
+            BigDecimal requestedQty = trade.requestedQuantity != null ? new BigDecimal(trade.requestedQuantity.toString()) : null
+            BigDecimal confirmedQty = trade.confirmedQuantity != null ? new BigDecimal(trade.confirmedQuantity.toString()) : null
+            BigDecimal qty = (status == 'CONFIRMED' && confirmedQty != null) ? confirmedQty : (confirmedQty ?: requestedQty)
+
+            String key = pairKey(sourceId, targetId)
+            Map entry = stats.get(key)
+            if (!entry) {
+                entry = [
+                        counts: [CONFIRMED: 0, PENDING: 0, REJECTED: 0, UNKNOWN: 0],
+                        totals: [CONFIRMED: BigDecimal.ZERO, PENDING: BigDecimal.ZERO, REJECTED: BigDecimal.ZERO, UNKNOWN: BigDecimal.ZERO],
+                        settled: [count: 0, total: BigDecimal.ZERO],
+                        lastTradeAt: null
+                ]
+                stats.put(key, entry)
+            }
+
+            if (!(entry.settled instanceof Map)) {
+                entry.settled = [count: 0, total: BigDecimal.ZERO]
+            }
+
+            entry.counts[status] = (entry.counts[status] ?: 0) + 1
+            if (unitPrice != null && qty != null) {
+                entry.totals[status] = (entry.totals[status] ?: BigDecimal.ZERO) + (unitPrice * qty)
+            }
+            boolean settledEvent = trade.eventName?.toString()?.toUpperCase() == 'TRADE_SETTLED' ||
+                    trade.settlementStatus?.toString()?.toUpperCase() == 'SETTLED'
+            if (settledEvent && unitPrice != null && qty != null) {
+                entry.settled.count = (entry.settled.count ?: 0) + 1
+                entry.settled.total = (entry.settled.total ?: BigDecimal.ZERO) + (unitPrice * qty)
+            }
+            if (!entry.lastTradeAt || (referenceTs && referenceTs.after(entry.lastTradeAt as Date))) {
+                entry.lastTradeAt = referenceTs
+            }
+        }
+        return stats
+    }
+
+    private Map<String, Map> buildTradeStatsFromTelemetry(Date from, Date to, String wlId, String wlImporter, String wlExporter, boolean pairFilter) {
         List<TelemetryEvent> events = TelemetryEvent.findAllByEventType('TRADER_PURCHASE')
         Map<String, Map> stats = [:]
         events.each { TelemetryEvent event ->

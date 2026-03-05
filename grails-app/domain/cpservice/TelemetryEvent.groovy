@@ -14,6 +14,8 @@ class TelemetryEvent {
     String whiteLabelId
     String nodeId
     String eventType
+    String idempotencyKey
+    String dedupeFingerprint
     String payload
     Date eventTimestamp
 
@@ -30,6 +32,8 @@ class TelemetryEvent {
         whiteLabelId blank: false, maxSize: 36
         nodeId blank: false, maxSize: 100
         eventType blank: false, maxSize: 120
+        idempotencyKey nullable: true, maxSize: 255
+        dedupeFingerprint nullable: true, maxSize: 64, unique: true
         payload blank: false
         eventTimestamp nullable: false
     }

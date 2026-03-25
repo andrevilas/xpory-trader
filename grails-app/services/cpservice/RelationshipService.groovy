@@ -37,6 +37,33 @@ class RelationshipService {
         if (payload.containsKey('status')) {
             rel.status = payload.status?.toString()?.toLowerCase()
         }
+        if (payload.containsKey('approvalMode') || payload.containsKey('approval_mode')) {
+            rel.approvalMode = normalizeApprovalMode(payload.approvalMode ?: payload.approval_mode)
+        }
+        if (payload.containsKey('manualApprovalAboveAmount') || payload.containsKey('manual_approval_above_amount')) {
+            Object rawValue = payload.containsKey('manualApprovalAboveAmount') ?
+                    payload.manualApprovalAboveAmount : payload.manual_approval_above_amount
+            rel.manualApprovalAboveAmount = rawValue == null ? null : toBigDecimal(rawValue)
+        }
+        if (payload.containsKey('manualApprovalAboveQty') || payload.containsKey('manual_approval_above_qty')) {
+            Object rawValue = payload.containsKey('manualApprovalAboveQty') ?
+                    payload.manualApprovalAboveQty : payload.manual_approval_above_qty
+            rel.manualApprovalAboveQty = rawValue == null ? null : toIntegerValue(rawValue, 'Integer value expected')
+        }
+        if (payload.containsKey('manualApprovalOnFirstTrade') || payload.containsKey('manual_approval_on_first_trade')) {
+            rel.manualApprovalOnFirstTrade = toBooleanValue(
+                    payload.containsKey('manualApprovalOnFirstTrade') ?
+                            payload.manualApprovalOnFirstTrade : payload.manual_approval_on_first_trade,
+                    'Boolean value expected'
+            )
+        }
+        if (payload.containsKey('manualApprovalOnImbalance') || payload.containsKey('manual_approval_on_imbalance')) {
+            rel.manualApprovalOnImbalance = toBooleanValue(
+                    payload.containsKey('manualApprovalOnImbalance') ?
+                            payload.manualApprovalOnImbalance : payload.manual_approval_on_imbalance,
+                    'Boolean value expected'
+            )
+        }
         if (payload.containsKey('notes')) {
             rel.notes = payload.notes?.toString()
         }
@@ -87,6 +114,49 @@ class RelationshipService {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException('Numeric value expected')
         }
+    }
+
+    protected Integer toIntegerValue(Object value, String errorMessage) {
+        if (value == null) {
+            return null
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue()
+        }
+        try {
+            return Integer.valueOf(value.toString())
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(errorMessage)
+        }
+    }
+
+    protected Boolean toBooleanValue(Object value, String errorMessage) {
+        if (value == null) {
+            return null
+        }
+        if (value instanceof Boolean) {
+            return value as Boolean
+        }
+        String normalized = value.toString().trim().toLowerCase()
+        if (normalized in ['true', 'false']) {
+            return Boolean.valueOf(normalized)
+        }
+        throw new IllegalArgumentException(errorMessage)
+    }
+
+    protected String normalizeApprovalMode(Object value) {
+        if (value == null) {
+            return null
+        }
+        String normalized = value.toString().trim().toUpperCase()
+        if (!(normalized in [
+                Relationship.APPROVAL_MODE_MANUAL,
+                Relationship.APPROVAL_MODE_AUTO,
+                Relationship.APPROVAL_MODE_HYBRID
+        ])) {
+            throw new IllegalArgumentException('Invalid approvalMode')
+        }
+        normalized
     }
 
     private Map parseExportPolicy(Object rawPolicy) {

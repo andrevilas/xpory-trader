@@ -149,6 +149,15 @@ The relationship payload returned by `/relationships/{src}/{dst}` now exposes:
 - `fx_rate` (`decimal`): cross-currency conversion factor.
 - `imbalance_limit` (`decimal`): risk ceiling (used by later waves).
 - `status` (`string`): `active`, `paused`, or `blocked`.
+- `approval_mode` (`string`): `MANUAL`, `AUTO`, or `HYBRID`.
+- `manual_approval_above_amount` (`decimal`, optional): when set, trades above
+  this total require manual review in `HYBRID`.
+- `manual_approval_above_qty` (`integer`, optional): when set, quantities above
+  this limit require manual review in `HYBRID`.
+- `manual_approval_on_first_trade` (`boolean`): require manual review on the
+  first eligible trade when enabled.
+- `manual_approval_on_imbalance` (`boolean`): require manual review when the
+  imbalance threshold policy is triggered.
 - `signature` (`object`): HMAC signature over the response body.
 - `updatedBy` / `updatedSource`: audit fields for the last relationship update.
 

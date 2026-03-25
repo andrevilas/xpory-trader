@@ -15,6 +15,9 @@ class TradeProjection {
     String status
     String settlementStatus
     String eventName
+    String approvalMode
+    String approvalPath
+    String pendingReason
     BigDecimal unitPrice
     Integer requestedQuantity
     Integer confirmedQuantity
@@ -38,6 +41,9 @@ class TradeProjection {
         targetWhiteLabelId column: 'target_white_label_id'
         settlementStatus column: 'settlement_status'
         eventName column: 'event_name'
+        approvalMode column: 'approval_mode'
+        approvalPath column: 'approval_path'
+        pendingReason column: 'pending_reason'
         unitPrice column: 'unit_price', scale: 2
         requestedQuantity column: 'requested_quantity'
         confirmedQuantity column: 'confirmed_quantity'
@@ -57,6 +63,9 @@ class TradeProjection {
         status nullable: true, maxSize: 40
         settlementStatus nullable: true, maxSize: 40
         eventName nullable: true, maxSize: 60
+        approvalMode nullable: true, maxSize: 20
+        approvalPath nullable: true, maxSize: 20
+        pendingReason nullable: true, maxSize: 120
         unitPrice nullable: true
         requestedQuantity nullable: true
         confirmedQuantity nullable: true

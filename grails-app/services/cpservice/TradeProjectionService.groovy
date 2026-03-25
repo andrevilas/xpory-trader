@@ -23,6 +23,9 @@ class TradeProjectionService {
         projection.status = payload.status?.toString()?.toUpperCase() ?: projection.status
         projection.settlementStatus = payload.settlementStatus?.toString()?.toUpperCase() ?: projection.settlementStatus
         projection.eventName = payload.eventName?.toString()?.toUpperCase() ?: projection.eventName
+        projection.approvalMode = payload.approvalMode?.toString()?.toUpperCase() ?: projection.approvalMode
+        projection.approvalPath = payload.approvalPath?.toString()?.toUpperCase() ?: projection.approvalPath
+        projection.pendingReason = payload.pendingReason?.toString()?.toUpperCase() ?: projection.pendingReason
         projection.unitPrice = toBigDecimal(payload.unitPrice) ?: projection.unitPrice
         projection.requestedQuantity = toInteger(payload.requestedQuantity) ?: projection.requestedQuantity
         projection.confirmedQuantity = toInteger(payload.confirmedQuantity) ?: projection.confirmedQuantity

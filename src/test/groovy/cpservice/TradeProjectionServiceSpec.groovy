@@ -37,6 +37,8 @@ class TradeProjectionServiceSpec extends Specification implements ServiceUnitTes
                 originWhiteLabelId: 'wl-exp',
                 targetWhiteLabelId: 'wl-imp',
                 status            : 'PENDING',
+                approvalMode      : 'HYBRID',
+                pendingReason     : 'FIRST_TRADE',
                 eventName         : 'TRADE_PENDING',
                 unitPrice         : 10G,
                 requestedQuantity : 2,
@@ -58,6 +60,8 @@ class TradeProjectionServiceSpec extends Specification implements ServiceUnitTes
         updated.tradeExternalId == 'ext-1'
         updated.status == 'CONFIRMED'
         updated.settlementStatus == 'SETTLED'
+        updated.approvalMode == 'HYBRID'
+        updated.pendingReason == 'FIRST_TRADE'
         updated.settledAt?.time == settledTs.time
         updated.confirmedQuantity == 2
         updated.requestedQuantity == 2

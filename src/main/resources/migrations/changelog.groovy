@@ -12,4 +12,6 @@ databaseChangeLog = {
     include file: '20260106-relationship-export-policy-version-columns.groovy', relativeToChangelogFile: true
     include file: '20260305-trade-projection.groovy', relativeToChangelogFile: true
     include file: '20260305-telemetry-idempotency.groovy', relativeToChangelogFile: true
+    include file: '20260325-relationship-approval-policy.groovy', relativeToChangelogFile: true
+    include file: '20260325-trade-projection-approval-fields.groovy', relativeToChangelogFile: true
 }

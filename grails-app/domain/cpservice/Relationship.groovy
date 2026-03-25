@@ -9,12 +9,21 @@ import groovy.transform.ToString
 @ToString(includes = ['id', 'sourceId', 'targetId'], includeNames = true)
 class Relationship {
 
+    static final String APPROVAL_MODE_MANUAL = 'MANUAL'
+    static final String APPROVAL_MODE_AUTO = 'AUTO'
+    static final String APPROVAL_MODE_HYBRID = 'HYBRID'
+
     String id
     String sourceId
     String targetId
     BigDecimal fxRate = BigDecimal.ONE
     BigDecimal limitAmount = BigDecimal.ZERO
     String status = 'active'
+    String approvalMode = APPROVAL_MODE_MANUAL
+    BigDecimal manualApprovalAboveAmount
+    Integer manualApprovalAboveQty
+    Boolean manualApprovalOnFirstTrade = false
+    Boolean manualApprovalOnImbalance = false
     String notes
     String updatedBy
     String updatedSource
@@ -30,6 +39,7 @@ class Relationship {
         id generator: 'uuid2', type: 'string', length: 36
         fxRate scale: 6, precision: 18
         limitAmount scale: 2, precision: 18
+        manualApprovalAboveAmount scale: 2, precision: 18
         sourceId index: 'idx_cp_relationship_src'
         targetId index: 'idx_cp_relationship_dst'
         exportPolicyJson column: 'export_policy', type: 'text'
@@ -41,6 +51,11 @@ class Relationship {
         fxRate nullable: false, min: 0.000001G
         limitAmount nullable: false, min: 0.0G
         status inList: ['active', 'blocked', 'inactive', 'paused']
+        approvalMode blank: false, inList: [APPROVAL_MODE_MANUAL, APPROVAL_MODE_AUTO, APPROVAL_MODE_HYBRID]
+        manualApprovalAboveAmount nullable: true, min: 0.0G
+        manualApprovalAboveQty nullable: true, min: 1
+        manualApprovalOnFirstTrade nullable: false
+        manualApprovalOnImbalance nullable: false
         notes nullable: true, maxSize: 500
         updatedBy nullable: true, maxSize: 120
         updatedSource nullable: true, maxSize: 120

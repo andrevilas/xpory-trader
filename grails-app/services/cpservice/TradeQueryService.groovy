@@ -1,12 +1,13 @@
 package cpservice
 
 import grails.gorm.transactions.Transactional
-import groovy.json.JsonSlurper
 
 import java.time.OffsetDateTime
 
 @Transactional(readOnly = true)
 class TradeQueryService {
+
+    TradeApprovalService tradeApprovalService
 
     Map list(Map params = [:]) {
         Integer limit = parseInt(params?.limit, 50)
@@ -18,48 +19,46 @@ class TradeQueryService {
         String sourceId = (params?.sourceId ?: params?.wlExporter)?.toString()
         String targetId = (params?.targetId ?: params?.wlImporter)?.toString()
         String statusFilter = params?.status?.toString()?.toUpperCase()
+        String clientNameFilter = params?.clientName?.toString()?.trim()?.toLowerCase()
+        BigDecimal minValue = toBigDecimal(params?.minValue ?: params?.valueMin)
+        BigDecimal maxValue = toBigDecimal(params?.maxValue ?: params?.valueMax)
 
-        List<TelemetryEvent> events = TelemetryEvent.createCriteria().list {
-            eq('eventType', 'TRADER_PURCHASE')
+        List<TradeProjection> projections = TradeProjection.createCriteria().list {
             if (from) {
-                ge('eventTimestamp', from)
+                ge('lastEventTimestamp', from)
             }
             if (to) {
-                le('eventTimestamp', to)
+                le('lastEventTimestamp', to)
             }
-            order('eventTimestamp', 'desc')
+            if (sourceId) {
+                eq('originWhiteLabelId', sourceId)
+            }
+            if (targetId) {
+                eq('targetWhiteLabelId', targetId)
+            }
+            if (statusFilter) {
+                eq('status', statusFilter)
+            }
+            order('lastEventTimestamp', 'desc')
+            order('dateCreated', 'desc')
         }
 
-        List<Map> trades = events.collect { TelemetryEvent event ->
-            Map payload = parsePayload(event.payload)
-            Map trade = buildTrade(payload, event)
-            return trade
+        Map<String, String> nameById = resolveWhiteLabelNames(projections.collect { TradeProjection projection ->
+            [wlExporter: projection.originWhiteLabelId, wlImporter: projection.targetWhiteLabelId]
+        })
+
+        List<Map> trades = projections.collect { TradeProjection projection ->
+            Map trade = buildTrade(projection)
+            enrichTrade(trade, nameById)
+            trade
         }.findAll { Map trade ->
-            if (!trade) {
-                return false
-            }
-            if (sourceId && trade.wlExporter != sourceId) {
-                return false
-            }
-            if (targetId && trade.wlImporter != targetId) {
-                return false
-            }
-            if (statusFilter && (trade.status ?: '').toUpperCase() != statusFilter) {
-                return false
-            }
-            return true
+            matchesOperationalFilters(trade, clientNameFilter, minValue, maxValue)
         }
 
         int total = trades.size()
         int safeOffset = Math.min(Math.max(offset, 0), total)
         int safeLimit = Math.max(limit, 1)
         List<Map> page = trades.drop(safeOffset).take(safeLimit)
-
-        Map<String, String> nameById = resolveWhiteLabelNames(page)
-        page.each { Map trade ->
-            trade.wlExporterName = nameById.get(trade.wlExporter)
-            trade.wlImporterName = nameById.get(trade.wlImporter)
-        }
 
         return [
                 items : page,
@@ -69,34 +68,130 @@ class TradeQueryService {
         ]
     }
 
-    private Map buildTrade(Map payload, TelemetryEvent event) {
-        if (!payload) {
+    private Map buildTrade(TradeProjection projection) {
+        if (!projection) {
             return null
         }
-        String wlExporter = payload.originWhiteLabelId?.toString()
-        String wlImporter = payload.targetWhiteLabelId?.toString()
+        String wlExporter = projection.originWhiteLabelId?.toString()
+        String wlImporter = projection.targetWhiteLabelId?.toString()
         if (!wlExporter || !wlImporter) {
             return null
         }
-        String status = payload.status?.toString() ?: 'UNKNOWN'
-        BigDecimal unitPrice = toBigDecimal(payload.unitPrice)
-        BigDecimal requestedQty = toBigDecimal(payload.requestedQuantity)
-        BigDecimal confirmedQty = toBigDecimal(payload.confirmedQuantity)
+        String status = projection.status?.toString() ?: 'UNKNOWN'
+        BigDecimal unitPrice = toBigDecimal(projection.unitPrice)
+        BigDecimal requestedQty = toBigDecimal(projection.requestedQuantity)
+        BigDecimal confirmedQty = toBigDecimal(projection.confirmedQuantity)
         BigDecimal qty = (status?.toUpperCase() == 'CONFIRMED' && confirmedQty != null) ? confirmedQty : requestedQty
         BigDecimal totalValue = (unitPrice != null && qty != null) ? unitPrice * qty : null
-        String tradeId = payload.tradeId?.toString() ?: payload.externalTradeId?.toString() ?: event.id?.toString()
+        String tradeId = projection.tradeId?.toString() ?: projection.tradeExternalId?.toString() ?: projection.id?.toString()
 
         return [
                 tradeId           : tradeId,
+                tradeExternalId   : projection.tradeExternalId,
                 wlExporter        : wlExporter,
                 wlImporter        : wlImporter,
                 status            : status,
-                createdAt         : event.eventTimestamp,
+                createdAt         : projection.occurredAt ?: projection.lastEventTimestamp ?: projection.dateCreated,
                 unitPrice         : unitPrice,
                 requestedQuantity : requestedQty,
                 confirmedQuantity : confirmedQty,
-                totalValue        : totalValue
+                totalValue        : totalValue,
+                approvalMode      : projection.approvalMode,
+                approvalPath      : projection.approvalPath,
+                pendingReason     : projection.pendingReason,
+                settlementStatus  : projection.settlementStatus
         ]
+    }
+
+    private void enrichTrade(Map trade, Map<String, String> nameById) {
+        if (!trade) {
+            return
+        }
+        trade.wlExporterName = nameById.get(trade.wlExporter)
+        trade.wlImporterName = nameById.get(trade.wlImporter)
+
+        try {
+            Map details = tradeApprovalService?.getDetails((trade.tradeExternalId ?: trade.tradeId)?.toString())
+            if (!details) {
+                return
+            }
+            Map exporter = details.exporter instanceof Map ? (Map) details.exporter : [:]
+            Map importer = details.importer instanceof Map ? (Map) details.importer : [:]
+
+            trade.offerName = details.offerName ?: details.offer?.name
+            trade.exporterClientName = exporter.clientName
+            trade.exporterClientPhone = exporter.clientPhone
+            trade.importerClientName = importer.clientName
+            trade.importerClientPhone = importer.clientPhone
+            trade.exporterPrice = toBigDecimal(exporter.price)
+            trade.importerPrice = toBigDecimal(importer.priceWithoutFx ?: importer.priceOriginal ?: importer.price)
+            trade.importerFinalPrice = toBigDecimal(importer.price)
+            trade.exporterTotalValue = computeOperationalTotal(trade.exporterPrice, trade)
+            trade.importerTotalValue = computeOperationalTotal(trade.importerFinalPrice ?: trade.importerPrice, trade)
+            trade.originOfferId = details.originOfferId ?: details.offer?.id ?: trade.originOfferId
+            trade.originalOfferUrl = buildOriginalOfferUrl(trade.wlExporter?.toString(), trade.originOfferId?.toString())
+        } catch (Exception ignored) {
+            // Listing must stay resilient even when some WL detail endpoints are unavailable.
+        }
+    }
+
+    private boolean matchesOperationalFilters(Map trade, String clientNameFilter, BigDecimal minValue, BigDecimal maxValue) {
+        if (!trade) {
+            return false
+        }
+        if (clientNameFilter) {
+            String exporterName = trade.exporterClientName?.toString()?.toLowerCase()
+            String importerName = trade.importerClientName?.toString()?.toLowerCase()
+            if (!(exporterName?.contains(clientNameFilter) || importerName?.contains(clientNameFilter))) {
+                return false
+            }
+        }
+        if (minValue != null || maxValue != null) {
+            List<BigDecimal> candidates = [
+                    toBigDecimal(trade.exporterTotalValue),
+                    toBigDecimal(trade.importerTotalValue),
+                    toBigDecimal(trade.totalValue)
+            ].findAll { it != null } as List<BigDecimal>
+            if (!candidates) {
+                return false
+            }
+            boolean matchesValue = candidates.any { BigDecimal value ->
+                if (minValue != null && value < minValue) {
+                    return false
+                }
+                if (maxValue != null && value > maxValue) {
+                    return false
+                }
+                return true
+            }
+            if (!matchesValue) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private BigDecimal computeOperationalTotal(BigDecimal price, Map trade) {
+        if (price == null) {
+            return null
+        }
+        BigDecimal qty = toBigDecimal(trade.confirmedQuantity ?: trade.requestedQuantity)
+        if (qty == null) {
+            return null
+        }
+        return price.multiply(qty)
+    }
+
+    private String buildOriginalOfferUrl(String whiteLabelId, String offerId) {
+        if (!whiteLabelId || !offerId) {
+            return null
+        }
+        WhiteLabel exporter = WhiteLabel.get(whiteLabelId)
+        if (!exporter?.gatewayUrl) {
+            return null
+        }
+        String base = exporter.gatewayUrl.toString().replaceAll('/+$', '')
+        return "${base}/troca/oferta/${offerId}"
     }
 
     private Map<String, String> resolveWhiteLabelNames(List<Map> trades) {
@@ -110,18 +205,6 @@ class TradeQueryService {
         }
         List<WhiteLabel> labels = WhiteLabel.findAllByIdInList(ids.toList())
         return labels.collectEntries { WhiteLabel wl -> [(wl.id): wl.name] }
-    }
-
-    private static Map parsePayload(String payload) {
-        if (!payload) {
-            return [:]
-        }
-        try {
-            Object parsed = new JsonSlurper().parseText(payload)
-            return parsed instanceof Map ? (Map) parsed : [:]
-        } catch (Exception ignored) {
-            return [:]
-        }
     }
 
     private static BigDecimal toBigDecimal(Object value) {

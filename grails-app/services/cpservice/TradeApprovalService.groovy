@@ -229,7 +229,11 @@ class TradeApprovalService {
                 targetWhiteLabelId: targetId,
                 wlExporterName    : wlNames[originId],
                 wlImporterName    : wlNames[targetId],
-                offerName         : exporterDetails?.offer?.name ?: importerDetails?.offer?.name
+                offerName         : exporterDetails?.offer?.name ?: importerDetails?.offer?.name,
+                originOfferId     : exporterDetails?.originOfferId ?: importerDetails?.originOfferId ?: exporterDetails?.offer?.id,
+                exporterTotalValue: resolveTotalValue(exporterDetails),
+                importerTotalValue: resolveTotalValue(importerDetails),
+                originalOfferUrl  : buildOriginalOfferUrl(originId, exporterDetails?.originOfferId ?: importerDetails?.originOfferId ?: exporterDetails?.offer?.id)
         ]
         response.exporter = buildTradeSide(originId, wlNames[originId], exporterDetails, true)
         response.importer = buildTradeSide(targetId, wlNames[targetId], importerDetails, false)
@@ -395,6 +399,18 @@ class TradeApprovalService {
             return null
         }
         actor.cell?.toString() ?: actor.phone?.toString()
+    }
+
+    private static String buildOriginalOfferUrl(String whiteLabelId, Object offerId) {
+        if (!whiteLabelId || !offerId) {
+            return null
+        }
+        WhiteLabel exporter = WhiteLabel.get(whiteLabelId)
+        if (!exporter?.gatewayUrl) {
+            return null
+        }
+        String base = exporter.gatewayUrl.toString().replaceAll('/+$', '')
+        return "${base}/troca/oferta/${offerId}"
     }
 
     private static Map parsePayload(String payload) {

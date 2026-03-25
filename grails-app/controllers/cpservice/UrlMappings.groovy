@@ -36,6 +36,7 @@ class UrlMappings {
         }
         "/reports/trade-balance"(controller: 'reports', action: 'tradeBalance', method: 'GET')
         "/trades"(controller: 'trade', action: 'index', method: 'GET')
+        "/trades/backfill"(controller: 'trade', action: 'backfill', method: 'POST')
         "/trades/pending"(controller: 'tradeApproval', action: 'pending', method: 'GET')
         "/trades/$tradeId/approve"(controller: 'tradeApproval', action: 'approve', method: 'POST')
         "/trades/$tradeId/reject"(controller: 'tradeApproval', action: 'reject', method: 'POST')

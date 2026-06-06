@@ -19,6 +19,7 @@ target/
 .classpath
 
 # Runtime artifacts and temp files
+.data/
 logs/
 tmp/
 *.log
